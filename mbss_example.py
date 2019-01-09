@@ -12,6 +12,7 @@ from mir_eval.separation import bss_eval_sources
 
 from routines import PlaySoundGUI, grid_layout, semi_circle_layout, random_layout, gm_layout
 from oiva import oiva
+from oiva2 import oiva2
 from oiva_group import oiva_group
 from generate_samples import sampling, wav_read_center
 
@@ -21,6 +22,7 @@ if __name__ == '__main__':
     choices = [
             'auxiva',
             'oiva',
+            'oiva2',
             'oivag',
             ]
 
@@ -51,7 +53,7 @@ if __name__ == '__main__':
     #absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 2  # the determined case
+    n_sources_target = 3  # the determined case
 
     use_fake_blinky = False
     use_real_R = False
@@ -72,7 +74,7 @@ if __name__ == '__main__':
     win_s = pra.transform.compute_synthesis_window(win_a, framesize // 2)
 
     # algorithm parameters
-    n_iter = 21
+    n_iter = 41
     n_nmf_sub_iter = 100
     sparse_reg = 0.
 
@@ -226,6 +228,11 @@ if __name__ == '__main__':
         Y = oiva(X_mics, n_src=n_sources_target, n_iter=n_iter, proj_back=True,
                 callback=convergence_callback,
                 )
+    elif args.algo == 'oiva2':
+        # Run AuxIVA
+        Y = oiva2(X_mics, n_src=n_sources_target, n_iter=n_iter, proj_back=True,
+                callback=convergence_callback,
+                )
     elif args.algo == 'oivag':
         # Run AuxIVA
         Y = oiva_group(X_mics, n_src=n_sources_target,
@@ -234,6 +241,8 @@ if __name__ == '__main__':
                 proj_back=True,
                 callback=convergence_callback,
                 )
+    else:
+        raise ValueError('No such algorithm {}'.format(args.algo))
 
     # Run iSTFT
     y = pra.transform.synthesis(

@@ -62,7 +62,7 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
         for f in range(n_freq):
             ind = np.argsort(v[f])[-n_src:]
             eigval = v[f][ind]
-            eigvec = w[f][:,ind]
+            eigvec = np.conj(w[f][:,ind])
             A[f,:,:] = eigvec * eigval[None,:]
             W[f,:,:] = eigvec / eigval[None,:]
 
@@ -130,7 +130,7 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
         W /= np.sqrt(gamma[None,None,:])
         A *= np.sqrt(gamma[None,None,:])
 
-        eps = 1e-10
+        eps = 1e-5
         r[r < eps] = eps
 
         if epoch % 10 == 0:
@@ -160,6 +160,13 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
                 errs.append((s, err_loc))
 
             W[I_def,:,s] = np.linalg.solve(V[I_def,s,:,:], A[I_def,:,s])
+
+            # normalize
+            P1 = np.conj(W[:,:,s])
+            P2 = np.sum(V[:,s,:,:] * W[:,None,:,s], axis=-1)
+            W[:,:,s] /= np.sqrt(
+                    np.sum(P1 * P2, axis=1)
+                    )[:,None]
 
         
         if len(errs) > 0:
