@@ -7,7 +7,7 @@ import numpy as np
 
 from pyroomacoustics.bss import projection_back
 
-def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
+def oiva3(X, n_src=None, n_iter=20, proj_back=True, W0=None,
         f_contrast=None, f_contrast_args=[],
         return_filters=False, callback=None):
 
@@ -54,28 +54,38 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
     # initialize the demixing matrices
     if W0 is None:
 
-        W = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
+        W = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
         A = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
 
-        # initialize A and W
+        W += np.eye(n_chan)[None,:,:]
+        W[:,n_src:,n_src:] *= -1
+        A[:,:n_src,:] += np.eye(n_src)[None,:,:]
+
+        # initialize A and W with PCA
+        '''
         v,w = np.linalg.eig(Cx)
         for f in range(n_freq):
             ind = np.argsort(v[f])[-n_src:]
             eigval = v[f][ind]
             eigvec = np.conj(w[f][:,ind])
             A[f,:,:] = eigvec * eigval[None,:]
-            W[f,:,:] = eigvec / eigval[None,:]
+            W[f,:,:n_src] = eigvec / eigval[None,:]
+        '''
 
-            W[f,:n_src,:] = np.eye(n_src)
-            A[f,:n_src,:] = np.eye(n_src)
 
     else:
         assert W0.shape == (n_chan, n_src), 'Mismatch in size of initial demixing matrix'
         W = W0.copy()
         A = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
+    
+    Wout = W[:,:,:n_src]
+    J = W[:,:n_src,n_src:]
 
+    L_inv = A[:,:n_src,:].swapaxes(1,2)
+    JL_inv = A[:,n_src:,:].swapaxes(1,2)
 
-    I = np.eye(n_src,n_src)
+    I_src = np.tile(np.eye(n_src), (n_freq, 1, 1))
+    I_chan = np.tile(np.eye(n_chan), (n_freq, 1, 1))
     Y = np.zeros((n_frames, n_freq, n_src), dtype=X.dtype)
     V = np.zeros((n_freq, n_src, n_chan, n_chan), dtype=X.dtype)
     r = np.zeros((n_frames, n_src))
@@ -83,16 +93,17 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
     # Compute the demixed output
     def demix(Y, X, W):
         for f in range(n_freq):
-            Y[:,f,:] = np.dot(X[:,f,:], np.conj(W[f,:,:]))
+            Y[:,f,:] = np.dot(X[:,f,:], np.conj(Wout[f,:,:]))
+
+    def update_J(J, A):
+        L_inv = np.conj(A[:,:n_src,:].swapaxes(1,2))
+        JL_inv = np.conj(A[:,:n_src,:].swapaxes(1,2))
+        J[:,:,:] = np.linalg.solve(L_inv, JL_inv)
 
     def cost_func(Y, r, A):
 
-        # need to compute L from A
-        L_inv = A[:,:n_src,:]
-        L = np.linalg.solve(L_inv, np.tile(I, (n_freq,1,1)))
-
-        # now compute log det
-        c1 = -2 * n_frames * np.sum(np.linalg.slogdet(L)[1])
+        # compute log det
+        c1 = 2 * n_frames * np.sum(np.linalg.slogdet(L_inv)[1])
 
         # now compute the log of activations
         c2 = n_freq * np.sum(np.log(r)) + n_freq
@@ -126,11 +137,13 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
         gamma = r.mean(axis=0)
         r /= gamma[None,:]
         Y /= np.sqrt(gamma[None,None,:])
-        W /= np.sqrt(gamma[None,None,:])
+        Wout /= np.sqrt(gamma[None,None,:])
         A *= np.sqrt(gamma[None,None,:])
 
-        eps = 1e-5
+        '''
+        eps = 1e-10
         r[r < eps] = eps
+        '''
 
         if epoch % 10 == 0:
             plt.figure()
@@ -152,13 +165,7 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
         # Update now the demixing matrix
         errs = []
         for s in range(n_src):
-            I_def = (np.linalg.norm(V[:,s,:,:].reshape((V.shape[0], -1)), axis=1) > 1e-10)
-
-            err_loc = np.where(I_def < 1e-10)[0]
-            if len(err_loc > 0):
-                errs.append((s, err_loc))
-
-            W[I_def,:,s] = np.linalg.solve(V[I_def,s,:,:], A[I_def,:,s])
+            W[:,:,s] = np.linalg.solve(np.matmul(np.conj(W[:,:,:].swapaxes(1,2)), V[:,s,:,:]), I_chan[:,:,s])
 
             # normalize
             P1 = np.conj(W[:,:,s])
@@ -168,23 +175,15 @@ def oiva(X, n_src=None, n_iter=20, proj_back=True, W0=None,
                     )[:,None]
 
             # Update the mixing matrix according to orthogonal constraints
-            rhs = np.linalg.inv(np.matmul(np.conj(W.swapaxes(-2,-1)), np.matmul(Cx, W)))
-            np.matmul(Cx, np.matmul(W, rhs), out=A)
+            u_left = np.matmul(np.conj(Wout.swapaxes(-2,-1)), np.matmul(Cx, Wout)).swapaxes(1,2)
+            u_right = np.matmul(Cx, Wout).swapaxes(1,2)
+            A[:,:,:] = np.linalg.solve(u_left, u_right).swapaxes(1,2)
 
-        '''
-        
-        if len(errs) > 0:
-            print('norm before inverse:')
-            for s, err_loc in errs:
-                print('  s = {}: {}'.format(s, err_loc))
-
-        # Update the mixing matrix according to orthogonal constraints
-        rhs = np.linalg.inv(np.matmul(np.conj(W.swapaxes(-2,-1)), np.matmul(Cx, W)))
-        np.matmul(Cx, np.matmul(W, rhs), out=A)
-        '''
+            # Update J
+            J[:,:,:] = np.linalg.solve(np.conj(L_inv), np.conj(JL_inv))
 
         if epoch % 3 == 0:
-            wha = np.matmul(np.conj(W.swapaxes(-2,-1)), A)
+            wha = np.matmul(np.conj(Wout.swapaxes(-2,-1)), A)
             const_goodness = np.linalg.norm(wha - np.eye(n_src)[None,:,:], axis=(1,2))
             num = len(np.where(const_goodness > 1e-1)[0])
             print('Const: max err: {}, numbers > 1e-1: {}'.format(np.max(const_goodness), num))

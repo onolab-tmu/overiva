@@ -66,9 +66,9 @@ def oiva2(X, n_src=None, n_iter=20, proj_back=True, W0=None,
             A[f,:,:] = eigvec * eigval[None,:]
             W[f,:,:] = eigvec / eigval[None,:]
 
-            '''
             W[f,:n_src,:] = np.eye(n_src)
-            '''
+            A[f,:n_src,:] = np.eye(n_src)
+
 
     else:
         assert W0.shape == (n_chan, n_src), 'Mismatch in size of initial demixing matrix'
@@ -177,15 +177,8 @@ def oiva2(X, n_src=None, n_iter=20, proj_back=True, W0=None,
                 )
 
         # Update now the demixing matrix
-        errs = []
         for s in range(n_src):
-            I_def = (np.linalg.norm(V[:,s,:,:].reshape((V.shape[0], -1)), axis=1) > 1e-10)
-
-            err_loc = np.where(I_def < 1e-10)[0]
-            if len(err_loc > 0):
-                errs.append((s, err_loc))
-
-            W[I_def,:,s] = np.linalg.solve(V[I_def,s,:,:], A[I_def,:,s])
+            W[:,:,s] = np.linalg.solve(V[:,s,:,:], A[:,:,s])
 
             # normalize
             P1 = np.conj(W[:,:,s])
@@ -195,26 +188,22 @@ def oiva2(X, n_src=None, n_iter=20, proj_back=True, W0=None,
                     )[:,None]
 
         
-        if len(errs) > 0:
-            print('norm before inverse:')
-            for s, err_loc in errs:
-                print('  s = {}: {}'.format(s, err_loc))
+            update_L(L_inv, W, J)
 
-        update_L(L_inv, W, J)
+            # Update the noise beamforming matrix
+            C = W[:,n_src:,:].swapaxes(1,2)
+            J[:,:,:] = np.linalg.solve(C11, np.matmul(L_inv, np.conj(C)) + C12)
 
-        # Update the noise beamforming matrix
-        C = W[:,n_src:,:].swapaxes(1,2)
-        J[:,:,:] = np.linalg.solve(C11, np.matmul(L_inv, np.conj(C)) + C12)
+            update_L(L_inv, W, J)
 
-        update_L(L_inv, W, J)
-
-        # update the lower part of the mixing model
-        A[:,n_src:,:] = np.matmul(np.conj(J).swapaxes(1,2), L_inv)
+            # update the lower part of the mixing model
+            A[:,n_src:,:] = np.matmul(np.conj(J).swapaxes(1,2), L_inv)
 
         if epoch % 3 == 0:
             wha = np.matmul(np.conj(W.swapaxes(-2,-1)), A)
             const_goodness = np.linalg.norm(wha - np.eye(n_src)[None,:,:], axis=(1,2))
-            print('Const:', np.where(const_goodness > 1e-1)[0])
+            num = len(np.where(const_goodness > 1e-1)[0])
+            print('Const: max err: {}, numbers > 1e-1: {}'.format(np.max(const_goodness), num))
 
     demix(Y, X, W)
 

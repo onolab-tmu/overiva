@@ -13,6 +13,7 @@ from mir_eval.separation import bss_eval_sources
 from routines import PlaySoundGUI, grid_layout, semi_circle_layout, random_layout, gm_layout
 from oiva import oiva
 from oiva2 import oiva2
+from oiva3 import oiva3
 from oiva_group import oiva_group
 from generate_samples import sampling, wav_read_center
 
@@ -23,6 +24,7 @@ if __name__ == '__main__':
             'auxiva',
             'oiva',
             'oiva2',
+            'oiva3',
             'oivag',
             ]
 
@@ -231,6 +233,11 @@ if __name__ == '__main__':
     elif args.algo == 'oiva2':
         # Run AuxIVA
         Y = oiva2(X_mics, n_src=n_sources_target, n_iter=n_iter, proj_back=True,
+                callback=convergence_callback,
+                )
+    elif args.algo == 'oiva3':
+        # Run AuxIVA
+        Y = oiva3(X_mics, n_src=n_sources_target, n_iter=n_iter, proj_back=True,
                 callback=convergence_callback,
                 )
     elif args.algo == 'oivag':
