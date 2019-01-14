@@ -14,6 +14,7 @@ from routines import PlaySoundGUI, grid_layout, semi_circle_layout, random_layou
 from oiva import oiva
 from oiva2 import oiva2
 from oiva3 import oiva3
+from oiva4 import oiva4
 from oiva_group import oiva_group
 from generate_samples import sampling, wav_read_center
 
@@ -25,6 +26,7 @@ if __name__ == '__main__':
             'oiva',
             'oiva2',
             'oiva3',
+            'oiva4',
             'oivag',
             ]
 
@@ -76,7 +78,7 @@ if __name__ == '__main__':
     win_s = pra.transform.compute_synthesis_window(win_a, framesize // 2)
 
     # algorithm parameters
-    n_iter = 41
+    n_iter = 21
     n_nmf_sub_iter = 100
     sparse_reg = 0.
 
@@ -238,6 +240,11 @@ if __name__ == '__main__':
     elif args.algo == 'oiva3':
         # Run AuxIVA
         Y = oiva3(X_mics, n_src=n_sources_target, n_iter=n_iter, proj_back=True,
+                callback=convergence_callback,
+                )
+    elif args.algo == 'oiva4':
+        # Run AuxIVA
+        Y = oiva4(X_mics, n_src=n_sources_target, n_iter=n_iter, proj_back=True,
                 callback=convergence_callback,
                 )
     elif args.algo == 'oivag':
