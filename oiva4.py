@@ -196,7 +196,7 @@ def oiva4(X, n_src=None, n_iter=20, proj_back=True, W0=None,
         # Update now the demixing matrix
         for s in range(n_src):
             Wout[:,:,s] = np.linalg.solve(
-                    np.matmul(np.conj(W.swapaxes(1,2)), V[:,s,:,:]),
+                    np.matmul(np.conj(W.swapaxes(1,2)), V[:,s,:,:]) + np.eye(n_chan) * 1e-10,
                     I_chan[:,:,s],
                     )
 

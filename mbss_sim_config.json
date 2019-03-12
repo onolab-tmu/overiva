@@ -1,0 +1,54 @@
+{
+  "name" : "mbss_sim",
+
+  "n_repeat" : 50,
+  "seed" : 12345,
+  "n_targets_list" : [2,3,4],
+  "n_mics_list" : [2,3,4,5,6,7],
+  "rt60_list" : {
+    "0.3" : { "max_order" : 17, "absorption" : 0.35 }
+  },
+  "sinr_list" : [10],
+  "samples_list" : "/home/robin/icassp2019-blinky-iva/samples/metadata.json",
+  "snr" : 60,
+  "fs" : 16000,
+  "room_dim" : [10, 7.5, 3],
+  "weak_source_var" : 1.0,
+  "n_interferers" : 10,
+  "ref_mic" : 0,
+  "dir" : "data",
+  "monitor_convergence" : false,
+
+  "stft_params" : {
+    "framesize" : 4096
+  },
+
+  "algorithm_kwargs" : {
+    "auxiva" : {
+      "n_iter" : 100,
+      "proj_back" : true
+    },
+    "ilrma": {
+      "n_iter": 100,
+      "proj_back": true,
+      "n_components": 4
+    },
+    "auxiva_gauss" : {
+      "n_iter" : 100,
+      "proj_back" : true
+    },
+    "auxiva_pca" : {
+      "n_iter" : 100,
+      "proj_back" : true
+    },
+    "oiva" : {
+      "n_iter" : 100,
+      "proj_back" : true
+    },
+    "oilrma": {
+      "n_iter": 100,
+      "proj_back": true,
+      "n_components": 4
+    }
+  }
+}
