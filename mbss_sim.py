@@ -233,44 +233,58 @@ def one_loop(args):
             results[-1]["sdr"].append(init_sdr[0])
             results[-1]["sir"].append(init_sir[0])
 
-        if name == "auxiva":
-            # Run AuxIVA
-            Y = pra.bss.auxiva(X_mics, callback=cb, **kwargs)
+        try:
+            if name == "auxiva":
+                # Run AuxIVA
+                Y = pra.bss.auxiva(X_mics, callback=cb, **kwargs)
 
-        elif name == "ilrma":
-            # Run AuxIVA
-            Y = pra.bss.ilrma(X_mics, callback=cb, **kwargs)
+            elif name == "ilrma":
+                # Run AuxIVA
+                Y = pra.bss.ilrma(X_mics, callback=cb, **kwargs)
 
-        elif name == "auxiva_gauss":
-            # Run AuxIVA
-            Y = auxiva_gauss(X_mics, callback=cb, **kwargs)
+            elif name == "auxiva_gauss":
+                # Run AuxIVA
+                Y = auxiva_gauss(X_mics, callback=cb, **kwargs)
 
-        elif name == "auxiva_pca":
-            # Run AuxIVA
-            Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
+            elif name == "auxiva_pca":
+                # Run AuxIVA
+                Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-        elif name == "oiva":
-            # Run BlinkIVA
-            Y = oiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
+            elif name == "oiva":
+                # Run BlinkIVA
+                Y = oiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-        elif name == "oilrma":
-            # Run BlinkIVA
-            Y = oilrma(X_mics, n_src=n_targets, callback=cb, **kwargs)
+            elif name == "oilrma":
+                # Run BlinkIVA
+                Y = oilrma(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-        else:
+            else:
+                continue
+        
+            # The last evaluation
+            convergence_callback(
+                Y,
+                n_targets,
+                results[-1]["sdr"],
+                results[-1]["sir"],
+                ref,
+                framesize,
+                win_s,
+                name,
+            )
+
+        except:
+            import os, json
+            pid = os.getpid()
+            # report last sdr/sir as np.nan
+            results[-1]["sdr"].append(np.nan)
+            results[-1]["sir"].append(np.nan)
+            # now write the problem to file
+            fn_err = os.path.join(parameters["_results_dir"], "error_{}.json".format(pid))
+            with open(fn_err, 'a') as f:
+                f.write(json.dumps(results[-1], indent=4))
+            # skip to next iteration
             continue
-
-        # The last evaluation
-        convergence_callback(
-            Y,
-            n_targets,
-            results[-1]["sdr"],
-            results[-1]["sir"],
-            ref,
-            framesize,
-            win_s,
-            name,
-        )
 
     # restore RNG former state
     np.random.set_state(rng_state)
