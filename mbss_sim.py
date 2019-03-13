@@ -172,7 +172,7 @@ def one_loop(args):
 
         y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s)
 
-        if algo_name not in ["oiva", "oilrma", "auxiva_pca"]:
+        if algo_name not in parameters["overdet_algos"]:
             new_ord = np.argsort(np.std(y, axis=0))[::-1]
             y = y[:, new_ord]
 
@@ -191,14 +191,7 @@ def one_loop(args):
     init_sir = []
     if not parameters["monitor_convergence"]:
         convergence_callback(
-            X_mics,
-            n_targets,
-            init_sdr,
-            init_sir,
-            ref,
-            framesize,
-            win_s,
-            "init",
+            X_mics, n_targets, init_sdr, init_sir, ref, framesize, win_s, "init"
         )
 
     for name, kwargs in parameters["algorithm_kwargs"].items():
@@ -217,6 +210,7 @@ def one_loop(args):
         )
 
         if parameters["monitor_convergence"]:
+
             def cb(Y):
                 convergence_callback(
                     Y,
@@ -224,9 +218,11 @@ def one_loop(args):
                     results[-1]["sdr"],
                     results[-1]["sir"],
                     ref,
-                    framesize, win_s,
+                    framesize,
+                    win_s,
                     name,
                 )
+
         else:
             cb = None
             # avoid one computation by using the initial values of sdr/sir
@@ -250,7 +246,7 @@ def one_loop(args):
                 # Run AuxIVA
                 Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-            elif name == "oiva":
+            elif name.startswith("oiva"):
                 # Run BlinkIVA
                 Y = oiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
@@ -260,7 +256,7 @@ def one_loop(args):
 
             else:
                 continue
-        
+
             # The last evaluation
             convergence_callback(
                 Y,
@@ -275,13 +271,16 @@ def one_loop(args):
 
         except:
             import os, json
+
             pid = os.getpid()
             # report last sdr/sir as np.nan
             results[-1]["sdr"].append(np.nan)
             results[-1]["sir"].append(np.nan)
             # now write the problem to file
-            fn_err = os.path.join(parameters["_results_dir"], "error_{}.json".format(pid))
-            with open(fn_err, 'a') as f:
+            fn_err = os.path.join(
+                parameters["_results_dir"], "error_{}.json".format(pid)
+            )
+            with open(fn_err, "a") as f:
                 f.write(json.dumps(results[-1], indent=4))
             # skip to next iteration
             continue

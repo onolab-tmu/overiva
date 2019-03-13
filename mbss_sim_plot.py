@@ -232,18 +232,20 @@ if __name__ == "__main__":
                 "auxiva_pca": "AuxIVA PCA (Laplace)",
                 "ilrma": "ILRMA",
                 "oilrma": "od-ILRMA",
-                "oiva": "od-IVA",
+                "oiva_laplace": "od-IVA (Laplace)",
+                "oiva_gauss": "od-IVA (Gauss)",
             }
         }
     )
 
     all_algos = [
         "AuxIVA (Laplace)",
-        "AuxIVA (Gauss)",
+        "od-IVA (Laplace)",
         "AuxIVA PCA (Laplace)",
+        "od-IVA (Gauss)",
+        "od-IVA(Gauss)",
         "ILRMA",
         "od-ILRMA",
-        "od-IVA",
     ]
 
     sns.set(
@@ -315,7 +317,8 @@ if __name__ == "__main__":
 
                 all_artists = []
 
-                left_ax = g.facet_axis(2, 0)
+                #left_ax = g.facet_axis(2, 0)
+                left_ax = g.facet_axis(0, 0)
                 leg = left_ax.legend(
                     title="Algorithms",
                     frameon=True,

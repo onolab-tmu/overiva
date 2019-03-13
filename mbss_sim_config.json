@@ -56,7 +56,14 @@
     "oilrma": {
       "n_iter": 100,
       "proj_back": true,
-      "n_components": 4
+      "n_components": 2
     }
-  }
+  },
+
+  "overdet_algos" : [
+    "oiva_laplace",
+    "oiva_gauss",
+    "oilrma",
+    "auxiva_pca"
+  ]
 }

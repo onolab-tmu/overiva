@@ -322,7 +322,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='Gauss',
+            model='gauss',
         )
     elif args.algo == "oiva_lap":
         # Run AuxIVA
@@ -332,7 +332,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='Laplace',
+            model='laplace',
         )
     elif args.algo == "oiva_mix":
         # Run AuxIVA
@@ -342,7 +342,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='Gauss',
+            model='gauss',
             update_mix=True,
         )
     elif args.algo == "oiva_lap_mix":
@@ -353,7 +353,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='Laplace',
+            model='laplace',
             update_mix=True,
         )
     elif args.algo == "oilrma":
