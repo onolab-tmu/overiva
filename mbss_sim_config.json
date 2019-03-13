@@ -6,6 +6,8 @@
   "n_targets_list" : [2,3,4],
   "n_mics_list" : [2,3,4,5,6,7],
   "rt60_list" : {
+    "0.1" : { "max_order" : 10, "absorption" : 0.55 },
+    "0.2" : { "max_order" : 12, "absorption" : 0.45 },
     "0.3" : { "max_order" : 17, "absorption" : 0.35 }
   },
   "sinr_list" : [10],
@@ -31,7 +33,7 @@
     "ilrma": {
       "n_iter": 100,
       "proj_back": true,
-      "n_components": 4
+      "n_components": 2
     },
     "auxiva_gauss" : {
       "n_iter" : 100,
@@ -41,9 +43,15 @@
       "n_iter" : 100,
       "proj_back" : true
     },
-    "oiva" : {
+    "oiva_laplace" : {
       "n_iter" : 100,
-      "proj_back" : true
+      "proj_back" : true,
+      "model" : "laplace"
+    },
+    "oiva_gauss" : {
+      "n_iter" : 100,
+      "proj_back" : true,
+      "model" : "gauss"
     },
     "oilrma": {
       "n_iter": 100,

@@ -14,8 +14,8 @@ def oiva(
     n_iter=20,
     proj_back=True,
     W0=None,
-    f_contrast=None,
-    f_contrast_args=[],
+    model='laplace',
+    update_mix=False,
     return_filters=False,
     callback=None,
 ):
@@ -35,10 +35,11 @@ def oiva(
         Scaling on first mic by back projection (default True)
     W0: ndarray (nfrequencies, nchannels, nchannels), optional
         Initial value for demixing matrix
-    f_contrast: dict of functions
-        A dictionary with two elements 'f' and 'df' containing the contrast
-        function taking 3 arguments This should be a ufunc acting element-wise
-        on any array
+    model: str
+        The model of source distribution 'gauss' or 'laplace' (default)
+    update_mix: bool
+        If set to to True, the algorithm will update the mixing matrix rather
+        than demixing
     return_filters: bool
         If true, the function will return the demixing matrix too
     callback: func
@@ -59,6 +60,7 @@ def oiva(
 
     # covariance matrix of input signal (n_freq, n_chan, n_chan)
     Cx = np.mean(X[:, :, :, None] * np.conj(X[:, :, None, :]), axis=0)
+    Cx_inv = np.linalg.inv(Cx)
 
     # initialize the demixing matrices
     if W0 is None:
@@ -75,8 +77,10 @@ def oiva(
             A[f, :, :] = eigvec * eigval[None, :]
             W[f, :, :] = eigvec / eigval[None, :]
 
+            '''
             W[f, :n_src, :] = np.eye(n_src)
             A[f, :n_src, :] = np.eye(n_src)
+            '''
 
     else:
         assert W0.shape == (
@@ -126,7 +130,12 @@ def oiva(
                 callback(Y)
 
         # shape: (n_frames, n_src)
-        r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
+        if model == 'laplace':
+            r[:, :] = np.sqrt(np.sum(np.abs(Y * np.conj(Y)), axis=1))
+        elif model == 'gauss':
+            r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
+        else:
+            raise ValueError('Only Gauss and Laplace models are supported')
 
         # set the scale of r
         gamma = r.mean(axis=0)
@@ -147,20 +156,39 @@ def oiva(
         )
 
         # Update now the demixing matrix
-        # errs = []
         for s in range(n_src):
-            W[:, :, s] = np.linalg.solve(V[:, s, :, :], A[:, :, s])
+            if update_mix:
+                # Update the Mixing matrix first
+                # potentially less computations
+                A[:, :, s] = np.matmul(V[:, s, :, :], W[:, :, s, None])[:, :, 0]
 
-            # normalize
-            P1 = np.conj(W[:, :, s])
-            P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
-            W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
+                # Update the demixing matrix according to orthogonal constraints
+                rhs = np.linalg.inv(
+                    np.matmul(np.conj(A.swapaxes(-2, -1)), np.matmul(Cx_inv, A))
+                )
+                np.matmul(Cx_inv, np.matmul(A, rhs), out=W)
 
-            # Update the mixing matrix according to orthogonal constraints
-            rhs = np.linalg.inv(
-                np.matmul(np.conj(W.swapaxes(-2, -1)), np.matmul(Cx, W))
-            )
-            np.matmul(Cx, np.matmul(W, rhs), out=A)
+                print(np.max(np.abs(np.eye(n_src) - np.dot(np.conj(W[50].T), A[50]))))
+
+                # normalize
+                P1 = np.conj(W[:, :, s])
+                P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
+                W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
+
+            else:
+                # Update the Demixing matrix first
+                W[:, :, s] = np.linalg.solve(V[:, s, :, :], A[:, :, s])
+
+                # normalize
+                P1 = np.conj(W[:, :, s])
+                P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
+                W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
+
+                # Update the mixing matrix according to orthogonal constraints
+                rhs = np.linalg.inv(
+                    np.matmul(np.conj(W.swapaxes(-2, -1)), np.matmul(Cx, W))
+                )
+                np.matmul(Cx, np.matmul(W, rhs), out=A)
 
     demix(Y, X, W)
 

@@ -46,6 +46,9 @@ if __name__ == "__main__":
         "oilrma",
         "oivag",
         "sketch",
+        "oiva_lap",
+        "oiva_mix",
+        "oiva_lap_mix",
     ]
 
     import argparse
@@ -319,6 +322,39 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
+            model='Gauss',
+        )
+    elif args.algo == "oiva_lap":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+            model='Laplace',
+        )
+    elif args.algo == "oiva_mix":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+            model='Gauss',
+            update_mix=True,
+        )
+    elif args.algo == "oiva_lap_mix":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+            model='Laplace',
+            update_mix=True,
         )
     elif args.algo == "oilrma":
         # Run AuxIVA
