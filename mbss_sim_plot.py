@@ -242,8 +242,8 @@ if __name__ == "__main__":
         "AuxIVA (Laplace)",
         "od-IVA (Laplace)",
         "AuxIVA PCA (Laplace)",
+        "AuxIVA (Gauss)",
         "od-IVA (Gauss)",
-        "od-IVA(Gauss)",
         "ILRMA",
         "od-ILRMA",
     ]
@@ -275,8 +275,8 @@ if __name__ == "__main__":
     fn_tmp = os.path.join(fig_dir, "RT60_{rt60}_SINR_{sinr}_{metric}.pdf")
 
     plt_kwargs = {
-        "SDR": {"ylim": [-5.5, 15.5], "yticks": [-5, 0, 5, 10, 15]},
-        "SIR": {"ylim": [-0.5, 35.5], "yticks": [0, 10, 20, 30]},
+        "SDR": {"ylim": [-5.5, 20.5], "yticks": [-5, 0, 5, 10, 15]},
+        "SIR": {"ylim": [-0.5, 40.5], "yticks": [0, 10, 20, 30]},
     }
     fig_cols = ["Average"]
     full_width = 3.2  # inches

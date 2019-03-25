@@ -23,6 +23,8 @@ def oiva(
     """
     Implementation of overdetermined IVA algorithm for BSS
 
+    Orthogonal constraints only
+
     Parameters
     ----------
     X: ndarray (nframes, nfrequencies, nchannels)

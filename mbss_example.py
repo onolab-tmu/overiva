@@ -22,6 +22,7 @@ from oiva import oiva
 from oiva2 import oiva2
 from oiva3 import oiva3
 from oiva4 import oiva4
+from oiva5 import oiva5
 from oilrma import oilrma
 from oiva_group import oiva_group
 from sketch_auxiva import sketch_auxiva
@@ -43,6 +44,7 @@ if __name__ == "__main__":
         "oiva2",
         "oiva3",
         "oiva4",
+        "oiva5",
         "oilrma",
         "oivag",
         "sketch",
@@ -105,9 +107,9 @@ if __name__ == "__main__":
     source_std = np.ones(n_sources_target)
     source_std[0] /= np.sqrt(2.0)
 
-    SIR = 10  # dB
+    SIR = 100  # dB
     SNR = (
-        60
+        10
     )  # dB, this is the SNR with respect to a single target source and microphone self-noise
 
     # STFT parameters
@@ -387,6 +389,15 @@ if __name__ == "__main__":
     elif args.algo == "oiva4":
         # Run AuxIVA
         Y = oiva4(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+        )
+    elif args.algo == "oiva5":
+        # Run AuxIVA
+        Y = oiva5(
             X_mics,
             n_src=n_sources_target,
             n_iter=n_iter,

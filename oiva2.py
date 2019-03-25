@@ -7,6 +7,8 @@ import numpy as np
 
 from pyroomacoustics.bss import projection_back
 
+from scipy.optimize import root
+
 
 def oiva2(
     X,
@@ -22,6 +24,8 @@ def oiva2(
 
     """
     Implementation of overdetermined IVA algorithm for BSS
+
+    Gaussian background only
 
     Parameters
     ----------
@@ -61,39 +65,33 @@ def oiva2(
     Cx = np.mean(X[:, :, :, None] * np.conj(X[:, :, None, :]), axis=0)
 
     # initialize the demixing matrices
-    if W0 is None:
+    W_hat = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
+    W = W_hat[:, :, :n_src]  # a view to the usefule part
+    # views on blocks of W
+    B = W_hat[:, :n_src, :n_src]
+    C = W_hat[:, n_src:, :n_src]
+    J = W_hat[:, :n_src, n_src:]
 
-        W = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
-        A = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
+    def compute_L():
+        return np.conj(B + np.matmul(J, C)).swapaxes(1, 2)
 
-        # initialize A and W
-        v, w = np.linalg.eig(Cx)
-        for f in range(n_freq):
-            ind = np.argsort(v[f])[-n_src:]
-            eigval = v[f][ind]
-            eigvec = np.conj(w[f][:, ind])
-            A[f, :, :] = eigvec * eigval[None, :]
-            W[f, :, :] = eigvec / eigval[None, :]
+    # initialize A and W
+    v, w = np.linalg.eig(Cx)
+    L = compute_L()
+    for f in range(n_freq):
+        ind = np.argsort(v[f])[-n_src:]
+        eigval = v[f][ind]
+        eigvec = np.conj(w[f][:, ind])
+        W[f, :, :] = eigvec / eigval[None, :]
+        A = eigvec * eigval[None, :]
 
-            W[f, :n_src, :] = np.eye(n_src)
-            A[f, :n_src, :] = np.eye(n_src)
+        W_hat[f, n_src:, n_src:] = -np.eye(n_chan - n_src)
 
-    else:
-        assert W0.shape == (
-            n_chan,
-            n_src,
-        ), "Mismatch in size of initial demixing matrix"
-        W = W0.copy()
-        A = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
+        J[f, :, :] = np.conj(np.dot(A[n_src:, :], L[f])).T
 
-    # keep L^{-1} as a view on the top part of the mixing matrix
-    L_inv = A[:, :n_src, :]
-
-    # last part of the demixing matrix
-    J = np.zeros((n_freq, n_src, n_chan - n_src), dtype=X.dtype)
-    J[:, :, :] = np.linalg.solve(
-        np.conj(L_inv).swapaxes(1, 2), np.conj(A[:, n_src:, :]).swapaxes(1, 2)
-    )
+        """
+        W[f, :n_src, :] = np.eye(n_src)
+        """
 
     # shape == (n_freq, n_src, n_src)
     C11 = 0.5 * np.mean(X[:, :, :n_src, None] * np.conj(X[:, :, None, :n_src]), axis=0)
@@ -111,19 +109,40 @@ def oiva2(
         for f in range(n_freq):
             Y[:, f, :] = np.dot(X[:, f, :], np.conj(W[f, :, :]))
 
-    def update_L(L, W, J):
+    def update_j(RX1, RX2, m):
+        # J is shape (n_freq, n_src, n_chan - n_src)
 
-        B = W[:, :n_src, :]
-        C = W[:, n_src:, :]
+        c_m = np.conj(C[:, m, :])
+        L_m = np.conj(
+            (
+                B
+                + np.matmul(J[:, :, :m], C[:, :m, :])
+                + np.matmul(J[:, :, m + 1 :], C[:, m + 1 :, :])
+            ).swapaxes(1, 2)
+        )
+        r_m = RX2[:, :, m]
 
-        tmp = np.conj(B + np.matmul(J, C)).swapaxes(1, 2)
-        L[:, :, :] = np.linalg.inv(tmp)
+        # apply the solution derived
+        v = np.linalg.solve(L_m, c_m)  # shape (n_freq, n_src)
+        g = np.linalg.solve(RX1, v)  # shape (n_freq, n_src)
+        h = np.linalg.solve(RX1, r_m)  # shape (n_freq, n_src)
+        nu = np.matmul(np.conj(g[:, None, :]), r_m[:, :, None])  # shape (n_freq, 1, 1)
+        eta = np.real(
+            np.matmul(np.conj(g[:, None, :]), v[:, :, None])
+        )  # shape (n_freq, 1, 1)
 
-    def cost_func(Y, r, A):
+        i1 = np.isclose(eta[:, 0, 0], -np.ones(n_freq))
+        J[i1, :, m] = h[i1, :] + g[i1, :] / np.sqrt(eta[i1, :, 0])
 
-        # need to compute L from A
-        L_inv = A[:, :n_src, :]
-        L = np.linalg.solve(L_inv, np.tile(I, (n_freq, 1, 1)))
+        i2 = np.logical_not(i1)
+        r1 = (1 + nu[i2, :, 0]) / eta[i2, :, 0]
+        r2 = 1.0 / np.real(r1 * (1.0 + np.conj(nu[i2, :, 0])))
+        beta2 = 0.5 * r1 * (-1 + np.sqrt(1 + 4 * r2))
+        J[i2, :, m] = h[i2, :] + beta2 * g[i2, :]
+
+    def cost_func(r):
+
+        L = compute_L()
 
         # now compute log det
         c1 = -2 * n_frames * np.sum(np.linalg.slogdet(L)[1])
@@ -131,7 +150,14 @@ def oiva2(
         # now compute the log of activations
         c2 = n_freq * np.sum(np.log(r)) + n_freq
 
-        return c1 + c2
+        c3 = 0.0
+        for s in range(n_chan - n_src):
+            j_m_H = np.conj(J[:, None, :, s])
+            j_m = J[:, :, None, s]
+            c3 += np.real(np.matmul(j_m_H, np.matmul(C11, j_m))).sum()
+            c3 -= np.real(np.matmul(j_m_H, C12[:, :, None, s])).sum()
+
+        return c1 + c2 + c3
 
     the_cost = []
 
@@ -152,7 +178,7 @@ def oiva2(
         r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
 
         if epoch % 3 == 0:
-            the_cost.append(cost_func(Y, r, A))
+            the_cost.append(cost_func(r))
             print("{}: {}".format(epoch, the_cost[-1]))
 
         # set the scale of r
@@ -160,8 +186,6 @@ def oiva2(
         r /= gamma[None, :]
         Y /= np.sqrt(gamma[None, None, :])
         W /= np.sqrt(gamma[None, None, :])
-        A *= np.sqrt(gamma[None, None, :])
-        J /= np.sqrt(gamma[None, :n_src, None])
 
         eps = 1e-5
         r[r < eps] = eps
@@ -172,7 +196,7 @@ def oiva2(
             plt.title("r {}".format(epoch))
 
         if epoch % 3 == 0:
-            after_scaling = cost_func(Y, r, A)
+            after_scaling = cost_func(r)
             print("  after scaling: {}".format(after_scaling))
 
         # Compute Auxiliary Variable
@@ -185,24 +209,21 @@ def oiva2(
 
         # Update now the demixing matrix
         for s in range(n_src):
-            W[:, :, s] = np.linalg.solve(V[:, s, :, :], A[:, :, s])
+            W[:, :, s] = np.linalg.solve(
+                np.matmul(np.conj(W_hat).swapaxes(1, 2), V[:, s, :, :]),
+                np.tile(np.eye(n_chan)[:, s], (n_freq, 1)),
+            )
 
             # normalize
             P1 = np.conj(W[:, :, s])
             P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
             W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
 
-            update_L(L_inv, W, J)
-
         # Update the noise beamforming matrix
-        C = W[:, n_src:, :].swapaxes(1, 2)
-        J[:, :, :] = np.linalg.solve(C11, np.matmul(L_inv, np.conj(C)) + C12)
-        
-        update_L(L_inv, W, J)
+        for s in range(n_chan - n_src):
+            update_j(C11, C12, s)
 
-        # update the lower part of the mixing model
-        A[:, n_src:, :] = np.matmul(np.conj(J).swapaxes(1, 2), L_inv)
-
+        """
         if epoch % 3 == 0:
             wha = np.matmul(np.conj(W.swapaxes(-2, -1)), A)
             const_goodness = np.linalg.norm(
@@ -214,6 +235,7 @@ def oiva2(
                     np.max(const_goodness), num
                 )
             )
+        """
 
     demix(Y, X, W)
 
@@ -221,7 +243,7 @@ def oiva2(
     r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
 
     if epoch % 3 == 0:
-        the_cost.append(cost_func(Y, r, A))
+        the_cost.append(cost_func(r))
 
     plt.figure()
     plt.plot(np.arange(len(the_cost)) * 3, the_cost)
@@ -235,6 +257,6 @@ def oiva2(
         Y *= np.conj(z[None, :, :])
 
     if return_filters:
-        return Y, W, A
+        return Y, W
     else:
         return Y
