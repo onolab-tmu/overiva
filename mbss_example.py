@@ -23,6 +23,7 @@ from oiva2 import oiva2
 from oiva3 import oiva3
 from oiva4 import oiva4
 from oiva5 import oiva5
+from oiva6 import oiva6
 from oilrma import oilrma
 from oiva_group import oiva_group
 from sketch_auxiva import sketch_auxiva
@@ -41,14 +42,17 @@ if __name__ == "__main__":
         "auxiva_gauss",
         "auxiva_gpu",
         "oiva",
+        "oiva_eig",
         "oiva2",
         "oiva3",
         "oiva4",
         "oiva5",
+        "oiva6",
         "oilrma",
         "oivag",
         "sketch",
         "oiva_lap",
+        "oiva_lap_eig",
         "oiva_mix",
         "oiva_lap_mix",
     ]
@@ -107,9 +111,9 @@ if __name__ == "__main__":
     source_std = np.ones(n_sources_target)
     source_std[0] /= np.sqrt(2.0)
 
-    SIR = 100  # dB
+    SIR = 10  # dB
     SNR = (
-        10
+        60
     )  # dB, this is the SNR with respect to a single target source and microphone self-noise
 
     # STFT parameters
@@ -118,7 +122,7 @@ if __name__ == "__main__":
     win_s = pra.transform.compute_synthesis_window(win_a, framesize // 2)
 
     # algorithm parameters
-    n_iter = 21
+    n_iter = 31
     n_nmf_sub_iter = 100
     sparse_reg = 0.0
 
@@ -326,12 +330,34 @@ if __name__ == "__main__":
             callback=convergence_callback,
             model='gauss',
         )
+    elif args.algo == "oiva_eig":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            init_eig=False,
+            proj_back=True,
+            callback=convergence_callback,
+            model='gauss',
+        )
     elif args.algo == "oiva_lap":
         # Run AuxIVA
         Y = oiva(
             X_mics,
             n_src=n_sources_target,
             n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+            model='laplace',
+        )
+    elif args.algo == "oiva_lap_eig":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            init_eig=True,
             proj_back=True,
             callback=convergence_callback,
             model='laplace',
@@ -398,6 +424,15 @@ if __name__ == "__main__":
     elif args.algo == "oiva5":
         # Run AuxIVA
         Y = oiva5(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+        )
+    elif args.algo == "oiva6":
+        # Run AuxIVA
+        Y = oiva6(
             X_mics,
             n_src=n_sources_target,
             n_iter=n_iter,

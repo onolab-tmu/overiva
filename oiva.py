@@ -14,8 +14,8 @@ def oiva(
     n_iter=20,
     proj_back=True,
     W0=None,
-    model='laplace',
-    update_mix=False,
+    model="laplace",
+    init_eig=False,
     return_filters=False,
     callback=None,
 ):
@@ -35,17 +35,19 @@ def oiva(
         The number of iterations (default 20)
     proj_back: bool, optional
         Scaling on first mic by back projection (default True)
-    W0: ndarray (nfrequencies, nchannels, nchannels), optional
+    W0: ndarray (nfrequencies, nsrc, nchannels), optional
         Initial value for demixing matrix
     model: str
         The model of source distribution 'gauss' or 'laplace' (default)
-    update_mix: bool
-        If set to to True, the algorithm will update the mixing matrix rather
-        than demixing
+    init_eig: bool, optional (default ``False``)
+        If ``True``, and if ``W0 is None``, then the weights are initialized
+        using the principal eigenvectors of the covariance matrix of the input
+        data.
     return_filters: bool
         If true, the function will return the demixing matrix too
     callback: func
-        A callback function called every 10 iterations, allows to monitor convergence
+        A callback function called every 10 iterations, allows to monitor
+        convergence
 
     Returns
     -------
@@ -62,37 +64,54 @@ def oiva(
 
     # covariance matrix of input signal (n_freq, n_chan, n_chan)
     Cx = np.mean(X[:, :, :, None] * np.conj(X[:, :, None, :]), axis=0)
-    Cx_inv = np.linalg.inv(Cx)
 
-    # initialize the demixing matrices
+    W_hat = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
+    W = W_hat[:, :, :n_src]
+    B = W_hat[:, :n_src, :n_src]
+    C = W_hat[:, n_src:, :n_src]
+    J = W_hat[:, :n_src, n_src:]
+
+    def tensor_H(T):
+        return np.conj(T).swapaxes(1, 2)
+
+    def compute_L():
+        return np.conj(B + np.matmul(J, C)).swapaxes(1, 2)
+
+    def update_J_from_orth_const():
+        tmp = np.matmul(tensor_H(W), Cx)
+        J[:, :, :] = np.linalg.solve(tmp[:, :, :n_src], tmp[:, :, n_src:])
+
+    # initialize A and W
     if W0 is None:
 
-        W = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
-        A = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
+        if init_eig:
+            # Initialize the demixing matrices with the principal
+            # eigenvectors of the input covariance
+            v, w = np.linalg.eig(Cx)
+            for f in range(n_freq):
+                ind = np.argsort(v[f])[-n_src:]
+                eigval = v[f][ind]
+                eigvec = np.conj(w[f][:, ind])
+                # W[f, :, :] = eigvec / eigval[None, :]
+                W[f, :, :] = eigvec
+                # A[f, :, :] = eigvec * eigval[None, :]
 
-        # initialize A and W
-        v, w = np.linalg.eig(Cx)
-        for f in range(n_freq):
-            ind = np.argsort(v[f])[-n_src:]
-            eigval = v[f][ind]
-            eigvec = np.conj(w[f][:, ind])
-            A[f, :, :] = eigvec * eigval[None, :]
-            W[f, :, :] = eigvec / eigval[None, :]
-
-            '''
-            W[f, :n_src, :] = np.eye(n_src)
-            A[f, :n_src, :] = np.eye(n_src)
-            '''
+        else:
+            # Or with identity
+            for f in range(n_freq):
+                W[f, :n_src, :] = np.eye(n_src)
 
     else:
-        assert W0.shape == (
-            n_chan,
-            n_src,
-        ), "Mismatch in size of initial demixing matrix"
-        W = W0.copy()
-        A = np.zeros((n_freq, n_chan, n_src), dtype=X.dtype)
+        W[:, :, :] = W0
 
-    I = np.eye(n_src, n_src)
+    # We still need to initialize the rest of the matrix
+    update_J_from_orth_const()
+    for f in range(n_freq):
+        W_hat[f, n_src:, n_src:] = -np.eye(n_chan - n_src)
+
+
+    eyes = np.tile(np.eye(n_chan, n_chan), (n_freq, 1, 1))
+    small_eyes = eyes[:, :n_src, :n_src]
     Y = np.zeros((n_frames, n_freq, n_src), dtype=X.dtype)
     V = np.zeros((n_freq, n_src, n_chan, n_chan), dtype=X.dtype)
     r = np.zeros((n_frames, n_src))
@@ -102,11 +121,11 @@ def oiva(
         for f in range(n_freq):
             Y[:, f, :] = np.dot(X[:, f, :], np.conj(W[f, :, :]))
 
-    def cost_func(Y, r, A):
+    def cost_func(Y, r):
 
         # need to compute L from A
-        L_inv = A[:, :n_src, :]
-        L = np.linalg.solve(L_inv, np.tile(I, (n_freq, 1, 1)))
+        L_inv = np.linalg.inv(compute_L())
+        L = np.linalg.solve(L_inv, small_eyes)
 
         # now compute log det
         c1 = -2 * n_frames * np.sum(np.linalg.slogdet(L)[1])
@@ -132,19 +151,18 @@ def oiva(
                 callback(Y)
 
         # shape: (n_frames, n_src)
-        if model == 'laplace':
+        if model == "laplace":
             r[:, :] = np.sqrt(np.sum(np.abs(Y * np.conj(Y)), axis=1))
-        elif model == 'gauss':
+        elif model == "gauss":
             r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
         else:
-            raise ValueError('Only Gauss and Laplace models are supported')
+            raise ValueError("Only Gauss and Laplace models are supported")
 
         # set the scale of r
         gamma = r.mean(axis=0)
         r /= gamma[None, :]
         Y /= np.sqrt(gamma[None, None, :])
         W /= np.sqrt(gamma[None, None, :])
-        A *= np.sqrt(gamma[None, None, :])
 
         eps = 1e-5
         r[r < eps] = eps
@@ -159,38 +177,18 @@ def oiva(
 
         # Update now the demixing matrix
         for s in range(n_src):
-            if update_mix:
-                # Update the Mixing matrix first
-                # potentially less computations
-                A[:, :, s] = np.matmul(V[:, s, :, :], W[:, :, s, None])[:, :, 0]
+            # Update the Demixing matrix first
+            W[:, :, s] = np.linalg.solve(
+                np.matmul(tensor_H(W_hat), V[:, s, :, :]), eyes[:, :, s]
+            )
 
-                # Update the demixing matrix according to orthogonal constraints
-                rhs = np.linalg.inv(
-                    np.matmul(np.conj(A.swapaxes(-2, -1)), np.matmul(Cx_inv, A))
-                )
-                np.matmul(Cx_inv, np.matmul(A, rhs), out=W)
+            # normalize
+            P1 = np.conj(W[:, :, s])
+            P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
+            W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
 
-                print(np.max(np.abs(np.eye(n_src) - np.dot(np.conj(W[50].T), A[50]))))
-
-                # normalize
-                P1 = np.conj(W[:, :, s])
-                P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
-                W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
-
-            else:
-                # Update the Demixing matrix first
-                W[:, :, s] = np.linalg.solve(V[:, s, :, :], A[:, :, s])
-
-                # normalize
-                P1 = np.conj(W[:, :, s])
-                P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
-                W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
-
-                # Update the mixing matrix according to orthogonal constraints
-                rhs = np.linalg.inv(
-                    np.matmul(np.conj(W.swapaxes(-2, -1)), np.matmul(Cx, W))
-                )
-                np.matmul(Cx, np.matmul(W, rhs), out=A)
+            # Update the mixing matrix according to orthogonal constraints
+            update_J_from_orth_const()
 
     demix(Y, X, W)
 
@@ -198,7 +196,7 @@ def oiva(
     r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
 
     if epoch % 3 == 0:
-        the_cost.append(cost_func(Y, r, A))
+        the_cost.append(cost_func(Y, r))
 
     plt.figure()
     plt.plot(np.arange(len(the_cost)) * 3, the_cost)
@@ -211,6 +209,6 @@ def oiva(
         Y *= np.conj(z[None, :, :])
 
     if return_filters:
-        return Y, W, A
+        return Y, W
     else:
         return Y

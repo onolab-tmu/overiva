@@ -46,11 +46,25 @@
     "oiva_laplace" : {
       "n_iter" : 100,
       "proj_back" : true,
+      "init_eig" : false,
+      "model" : "laplace"
+    },
+    "oiva_laplace_eig" : {
+      "n_iter" : 100,
+      "proj_back" : true,
+      "init_eig" : true,
       "model" : "laplace"
     },
     "oiva_gauss" : {
       "n_iter" : 100,
       "proj_back" : true,
+      "init_eig" : false,
+      "model" : "gauss"
+    },
+    "oiva_gauss_eig" : {
+      "n_iter" : 100,
+      "proj_back" : true,
+      "init_eig" : true,
       "model" : "gauss"
     },
     "oilrma": {
