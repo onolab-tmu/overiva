@@ -26,6 +26,7 @@ def init(parameters):
 def one_loop(args):
     global parameters
 
+    import time
     import numpy
 
     np = numpy
@@ -41,7 +42,7 @@ def one_loop(args):
     from routines import semi_circle_layout, random_layout, gm_layout, grid_layout
     from oiva import oiva
     from oilrma import oilrma
-    from auxiva_gauss import auxiva_gauss
+    from auxiva_gauss import auxiva
     from auxiva_pca import auxiva_pca
     from generate_samples import wav_read_center
 
@@ -134,7 +135,8 @@ def one_loop(args):
     room.compute_rir()
 
     # Run the simulation
-    premix = room.simulate(return_premix=True)
+    premix = room.simulate(return_premix=True)  # shape (n_src, n_mics, n_samples)
+    n_samples = premix.shape[2]
 
     # Normalize the signals so that they all have unit
     # variance at the reference microphone
@@ -154,10 +156,23 @@ def one_loop(args):
     )
     premix[n_targets:, :, :] *= sigma_i
 
-    # Mix down the recorded signals
-    mix = np.sum(premix, axis=0) + sigma_n * np.random.randn(*premix.shape[1:])
+    # sum up the background
+    # shape (n_mics, n_samples)
+    background = (
+            np.sum(premix[n_targets:, :, :], axis=0)
+            + sigma_n * np.random.randn(*premix.shape[1:])
+            )
 
-    ref = np.moveaxis(premix, 1, 2)
+    # Mix down the recorded signals
+    mix = np.sum(premix[:n_targets], axis=0) + background
+
+    # shape (n_targets+1, n_samples, n_mics)
+    ref = np.zeros((n_targets+1, premix.shape[2], premix.shape[1]), dtype=premix.dtype)  
+    ref[:n_targets, :, :] = premix[:n_targets, :, :].swapaxes(1, 2)
+    ref[n_targets, :, :] = background.T
+
+    synth = np.zeros_like(ref)
+    synth[n_targets, :, 0] = np.random.randn(synth.shape[1])  # fill this to compare to background
 
     # START BSS
     ###########
@@ -170,18 +185,26 @@ def one_loop(args):
     def convergence_callback(Y, n_targets, SDR, SIR, ref, framesize, win_s, algo_name):
         from mir_eval.separation import bss_eval_sources
 
-        y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s)
+        if Y.shape[2] == 1:
+            y = pra.transform.synthesis(
+                Y[:, :, 0], framesize, framesize // 2, win=win_s
+            )[:, None]
+        else:
+            y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s)
 
         if algo_name not in parameters["overdet_algos"]:
             new_ord = np.argsort(np.std(y, axis=0))[::-1]
             y = y[:, new_ord]
 
         m = np.minimum(y.shape[0] - framesize // 2, ref.shape[1])
+
+        synth[:n_targets, :m, 0] = y[framesize // 2 : m + framesize // 2, :n_targets].T
+
         sdr, sir, sar, perm = bss_eval_sources(
-            ref[:n_targets, :m, 0], y[framesize // 2 : m + framesize // 2, :n_targets].T
+                ref[:n_targets+1, :m, 0], synth[:, :m, 0]
         )
-        SDR.append(sdr.tolist())
-        SIR.append(sir.tolist())
+        SDR.append(sdr[:n_targets].tolist())
+        SIR.append(sir[:n_targets].tolist())
 
     # store results in a list, one entry per algorithm
     results = []
@@ -194,11 +217,14 @@ def one_loop(args):
             X_mics, n_targets, init_sdr, init_sir, ref, framesize, win_s, "init"
         )
 
-    for name, kwargs in parameters["algorithm_kwargs"].items():
+    for full_name, params in parameters["algorithm_kwargs"].items():
+
+        name = params['algo']
+        kwargs = params['kwargs']
 
         results.append(
             {
-                "algorithm": name,
+                "algorithm": full_name,
                 "n_targets": n_targets,
                 "n_mics": n_mics,
                 "rt60": rt60,
@@ -206,6 +232,8 @@ def one_loop(args):
                 "seed": seed,
                 "sdr": [],
                 "sir": [],  # to store the result
+                "runtime" : np.nan,
+                "n_samples" : n_samples,
             }
         )
 
@@ -230,25 +258,23 @@ def one_loop(args):
             results[-1]["sir"].append(init_sir[0])
 
         try:
+            t_start = time.perf_counter()
+
             if name == "auxiva":
                 # Run AuxIVA
-                Y = pra.bss.auxiva(X_mics, callback=cb, **kwargs)
-
-            elif name == "ilrma":
-                # Run AuxIVA
-                Y = pra.bss.ilrma(X_mics, callback=cb, **kwargs)
-
-            elif name == "auxiva_gauss":
-                # Run AuxIVA
-                Y = auxiva_gauss(X_mics, callback=cb, **kwargs)
+                Y = auxiva(X_mics, callback=cb, **kwargs)
 
             elif name == "auxiva_pca":
                 # Run AuxIVA
                 Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-            elif name.startswith("oiva"):
+            elif name == "oiva":
                 # Run BlinkIVA
                 Y = oiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
+
+            elif name == "ilrma":
+                # Run AuxIVA
+                Y = pra.bss.ilrma(X_mics, callback=cb, **kwargs)
 
             elif name == "oilrma":
                 # Run BlinkIVA
@@ -256,6 +282,8 @@ def one_loop(args):
 
             else:
                 continue
+
+            t_finish = time.perf_counter()
 
             # The last evaluation
             convergence_callback(
@@ -268,6 +296,8 @@ def one_loop(args):
                 win_s,
                 name,
             )
+
+            results[-1]["runtime"] = t_finish - t_start
 
         except:
             import os, json

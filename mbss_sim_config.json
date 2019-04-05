@@ -3,8 +3,8 @@
 
   "n_repeat" : 50,
   "seed" : 12345,
-  "n_targets_list" : [2,3,4],
-  "n_mics_list" : [2,3,4,5,6,7],
+  "n_targets_list" : [1,2,3,4],
+  "n_mics_list" : [2,3,4,5,6,7,8],
   "rt60_list" : {
     "0.1" : { "max_order" : 10, "absorption" : 0.55 },
     "0.2" : { "max_order" : 12, "absorption" : 0.45 },
@@ -26,36 +26,62 @@
   },
 
   "algorithm_kwargs" : {
-    "auxiva" : {
-      "n_iter" : 100,
-      "proj_back" : true
+    "auxiva_laplace" : {
+      "algo" : "auxiva",
+      "kwargs" : {
+        "n_iter" : 100,
+        "proj_back" : true,
+        "model" : "laplace"
+      }
     },
     "auxiva_gauss" : {
-      "n_iter" : 100,
-      "proj_back" : true
+      "algo" : "auxiva",
+      "kwargs" : {
+        "n_iter" : 100,
+        "proj_back" : true,
+        "model" : "gauss"
+      }
     },
-    "auxiva_pca" : {
-      "n_iter" : 100,
-      "proj_back" : true
+    "auxiva_pca_laplace" : {
+      "algo" : "auxiva_pca",
+      "kwargs" : {
+        "n_iter" : 100,
+        "proj_back" : true,
+        "model" : "laplace"
+      }
+    },
+    "auxiva_pca_gauss" : {
+      "algo" : "auxiva_pca",
+      "kwargs" : {
+        "n_iter" : 100,
+        "proj_back" : true,
+        "model" : "gauss"
+      }
     },
     "oiva_laplace" : {
-      "n_iter" : 100,
-      "proj_back" : true,
-      "init_eig" : false,
-      "model" : "laplace"
+      "algo" : "oiva",
+      "kwargs" : {
+        "n_iter" : 100,
+        "proj_back" : true,
+        "init_eig" : false,
+        "model" : "laplace"
+      }
     },
     "oiva_gauss" : {
-      "n_iter" : 100,
-      "proj_back" : true,
-      "init_eig" : false,
-      "model" : "gauss"
+      "algo" : "oiva",
+      "kwargs" : {
+        "n_iter" : 100,
+        "proj_back" : true,
+        "init_eig" : false,
+        "model" : "gauss"
+      }
     }
   },
 
   "overdet_algos" : [
     "oiva_laplace",
     "oiva_gauss",
-    "oilrma",
-    "auxiva_pca"
+    "auxiva_pca_laplace",
+    "auxiva_pca_gauss"
   ]
 }

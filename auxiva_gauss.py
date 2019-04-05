@@ -8,7 +8,6 @@ import numpy as np
 from pyroomacoustics import stft, istft
 from pyroomacoustics.bss import projection_back
 
-@profile
 def auxiva(
     X,
     n_src=None,

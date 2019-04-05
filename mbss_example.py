@@ -63,7 +63,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Demonstration of blind source separation using IVA or ILRMA."
     )
-    parser.add_argument("--no_cb", action='store_true', help="Removes callback function")
+    parser.add_argument(
+        "--no_cb", action="store_true", help="Removes callback function"
+    )
     parser.add_argument("-b", "--block", type=int, default=2048, help="STFT block size")
     parser.add_argument(
         "-a",
@@ -101,7 +103,7 @@ if __name__ == "__main__":
     # absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 3  # the determined case
+    n_sources_target = 2  # the determined case
 
     use_fake_blinky = False
     use_real_R = False
@@ -254,7 +256,9 @@ if __name__ == "__main__":
         from mir_eval.separation import bss_eval_sources
 
         if Y.shape[2] == 1:
-            y = pra.transform.synthesis(Y[:, :, 0], framesize, framesize // 2, win=win_s)[:,None]
+            y = pra.transform.synthesis(
+                Y[:, :, 0], framesize, framesize // 2, win=win_s
+            )[:, None]
         else:
             y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s)
 
@@ -293,7 +297,11 @@ if __name__ == "__main__":
     if args.algo == "auxiva_laplace":
         # Run AuxIVA
         Y = auxiva(
-            X_mics, n_iter=n_iter, proj_back=True, model='laplace', callback=convergence_callback
+            X_mics,
+            n_iter=n_iter,
+            proj_back=True,
+            model="laplace",
+            callback=convergence_callback,
         )
     elif args.algo == "auxiva_gauss":
         # Run AuxIVA
@@ -301,7 +309,7 @@ if __name__ == "__main__":
             X_mics,
             n_iter=n_iter,
             proj_back=True,
-            model='gauss',
+            model="gauss",
             callback=convergence_callback,
         )
     elif args.algo == "auxiva_pca_laplace":
@@ -311,7 +319,7 @@ if __name__ == "__main__":
             n_src=n_sources_target,
             n_iter=n_iter,
             proj_back=True,
-            model='laplace',
+            model="laplace",
             callback=convergence_callback,
         )
     elif args.algo == "auxiva_pca_gauss":
@@ -321,7 +329,7 @@ if __name__ == "__main__":
             n_src=n_sources_target,
             n_iter=n_iter,
             proj_back=True,
-            model='gauss',
+            model="gauss",
             callback=convergence_callback,
         )
     elif args.algo == "oiva_laplace":
@@ -332,7 +340,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='gauss',
+            model="laplace",
         )
     elif args.algo == "oiva_gauss":
         # Run AuxIVA
@@ -342,7 +350,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='gauss',
+            model="gauss",
         )
     elif args.algo == "auxiva_fast":
         # Run AuxIVA
@@ -367,7 +375,7 @@ if __name__ == "__main__":
             init_eig=False,
             proj_back=True,
             callback=convergence_callback,
-            model='gauss',
+            model="gauss",
         )
     elif args.algo == "oiva_lap":
         # Run AuxIVA
@@ -377,7 +385,7 @@ if __name__ == "__main__":
             n_iter=n_iter,
             proj_back=True,
             callback=convergence_callback,
-            model='laplace',
+            model="laplace",
         )
     elif args.algo == "oiva_lap_eig":
         # Run AuxIVA
@@ -388,7 +396,7 @@ if __name__ == "__main__":
             init_eig=True,
             proj_back=True,
             callback=convergence_callback,
-            model='laplace',
+            model="laplace",
         )
     elif args.algo == "oilrma":
         # Run AuxIVA
@@ -469,11 +477,13 @@ if __name__ == "__main__":
 
     toc = time.perf_counter()
 
-    print('Processing time: {} s'.format(toc - tic))
+    print("Processing time: {} s".format(toc - tic))
 
     # Run iSTFT
     if Y.shape[2] == 1:
-        y = pra.transform.synthesis(Y[:, :, 0], framesize, framesize // 2, win=win_s)[:,None]
+        y = pra.transform.synthesis(Y[:, :, 0], framesize, framesize // 2, win=win_s)[
+            :, None
+        ]
         y = y.astype(np.float64)
     else:
         y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s).astype(
