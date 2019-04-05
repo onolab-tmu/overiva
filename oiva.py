@@ -92,9 +92,7 @@ def oiva(
                 ind = np.argsort(v[f])[-n_src:]
                 eigval = v[f][ind]
                 eigvec = np.conj(w[f][:, ind])
-                # W[f, :, :] = eigvec / eigval[None, :]
                 W[f, :, :] = eigvec
-                # A[f, :, :] = eigvec * eigval[None, :]
 
         else:
             # Or with identity
@@ -109,54 +107,39 @@ def oiva(
     for f in range(n_freq):
         W_hat[f, n_src:, n_src:] = -np.eye(n_chan - n_src)
 
-
     eyes = np.tile(np.eye(n_chan, n_chan), (n_freq, 1, 1))
     small_eyes = eyes[:, :n_src, :n_src]
     Y = np.zeros((n_frames, n_freq, n_src), dtype=X.dtype)
-    V = np.zeros((n_freq, n_src, n_chan, n_chan), dtype=X.dtype)
+    V = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
+    r_inv = np.zeros((n_frames, n_src))
     r = np.zeros((n_frames, n_src))
+
+    # Things are more efficient when the frequencies are over the first axis
+    Y = np.zeros((n_freq, n_frames, n_src), dtype=X.dtype)
+    X = X.swapaxes(0, 1).copy()
 
     # Compute the demixed output
     def demix(Y, X, W):
-        for f in range(n_freq):
-            Y[:, f, :] = np.dot(X[:, f, :], np.conj(W[f, :, :]))
-
-    def cost_func(Y, r):
-
-        # need to compute L from A
-        L_inv = np.linalg.inv(compute_L())
-        L = np.linalg.solve(L_inv, small_eyes)
-
-        # now compute log det
-        c1 = -2 * n_frames * np.sum(np.linalg.slogdet(L)[1])
-
-        # now compute the log of activations
-        c2 = n_freq * np.sum(np.log(r)) + n_freq
-
-        return c1 + c2
-
-    the_cost = []
-
-    import matplotlib.pyplot as plt
+        Y[:, :, :] = X @ np.conj(W)
 
     for epoch in range(n_iter):
 
         demix(Y, X, W)
 
         if callback is not None and epoch % 10 == 0:
+            Y_tmp = Y.swapaxes(0, 1)
             if proj_back:
-                z = projection_back(Y, X[:, :, 0])
-                callback(Y * np.conj(z[None, :, :]))
+                z = projection_back(Y_tmp, X[:, :, 0].swapaxes(0, 1))
+                callback(Y_tmp * np.conj(z[None, :, :]))
             else:
-                callback(Y)
+                callback(Y_tmp)
 
+        # simple loop as a start
         # shape: (n_frames, n_src)
-        if model == "laplace":
-            r[:, :] = np.sqrt(np.sum(np.abs(Y * np.conj(Y)), axis=1))
-        elif model == "gauss":
-            r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
-        else:
-            raise ValueError("Only Gauss and Laplace models are supported")
+        if model == 'laplace':
+            r[:, :] = (2. * np.linalg.norm(Y, axis=0))
+        elif model == 'gauss':
+            r[:, :] = (np.linalg.norm(Y, axis=0) ** 2) / n_freq
 
         # set the scale of r
         gamma = r.mean(axis=0)
@@ -164,45 +147,31 @@ def oiva(
         Y /= np.sqrt(gamma[None, None, :])
         W /= np.sqrt(gamma[None, None, :])
 
-        eps = 1e-5
+        eps = 1e-15
         r[r < eps] = eps
 
-        # Compute Auxiliary Variable
-        np.mean(
-            (0.5 * X[:, :, None, :, None] / r[:, None, :, None, None])
-            * np.conj(X[:, :, None, None, :]),
-            axis=0,
-            out=V,
-        )
+        r_inv[:, :] = 1. / r
 
         # Update now the demixing matrix
         for s in range(n_src):
-            # Update the Demixing matrix first
-            W[:, :, s] = np.linalg.solve(
-                np.matmul(tensor_H(W_hat), V[:, s, :, :]), eyes[:, :, s]
-            )
+            # Compute Auxiliary Variable
+            # shape: (n_freq, n_chan, n_chan)
+            V[:, :, :] = (X.swapaxes(1, 2) * r_inv[None, None, :, s]) @ np.conj(X) / n_frames
+
+            WV = np.conj(W_hat).swapaxes(1, 2) @ V
+            W[:, :, s] = np.linalg.solve(WV, eyes[:, :, s])
 
             # normalize
-            P1 = np.conj(W[:, :, s])
-            P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
-            W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
+            denom = np.conj(W[:, None, :, s]) @ V[:, :, :] @ W[:, :, None, s]
+            W[:, :, s] /= np.sqrt(denom[:, :, 0])
 
             # Update the mixing matrix according to orthogonal constraints
             update_J_from_orth_const()
 
     demix(Y, X, W)
 
-    # shape: (n_frames, n_src)
-    r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
-
-    if epoch % 3 == 0:
-        the_cost.append(cost_func(Y, r))
-
-    plt.figure()
-    plt.plot(np.arange(len(the_cost)) * 3, the_cost)
-    plt.title("The cost function")
-    plt.xlabel("Number of iterations")
-    plt.ylabel("Neg. log-likelihood")
+    Y = Y.swapaxes(0, 1).copy()
+    X = X.swapaxes(0, 1)
 
     if proj_back:
         z = projection_back(Y, X[:, :, 0])

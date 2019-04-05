@@ -29,20 +29,21 @@ from oiva_group import oiva_group
 from sketch_auxiva import sketch_auxiva
 from auxiva_pca import auxiva_pca
 from generate_samples import sampling, wav_read_center
-from auxiva_gpu import auxiva_gpu
-from auxiva_gauss import auxiva_gauss
+from auxiva_gauss import auxiva
 from auxiva_fast import auxiva_fast
 
 # We concatenate a few samples to make them long enough
 if __name__ == "__main__":
 
     choices = [
-        "auxiva",
+        "auxiva_laplace",
+        "auxiva_gauss",
+        "auxiva_pca_laplace",
+        "auxiva_pca_gauss",
+        "oiva_laplace",
+        "oiva_gauss",
         "auxiva_fast",
         "ilrma",
-        "auxiva_pca",
-        "auxiva_gauss",
-        "auxiva_gpu",
         "oiva",
         "oiva_eig",
         "oiva2",
@@ -55,8 +56,6 @@ if __name__ == "__main__":
         "sketch",
         "oiva_lap",
         "oiva_lap_eig",
-        "oiva_mix",
-        "oiva_lap_mix",
     ]
 
     import argparse
@@ -64,6 +63,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Demonstration of blind source separation using IVA or ILRMA."
     )
+    parser.add_argument("--no_cb", action='store_true', help="Removes callback function")
     parser.add_argument("-b", "--block", type=int, default=2048, help="STFT block size")
     parser.add_argument(
         "-a",
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     # absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 2  # the determined case
+    n_sources_target = 3  # the determined case
 
     use_fake_blinky = False
     use_real_R = False
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     source_std = np.ones(n_sources_target)
     source_std[0] /= np.sqrt(2.0)
 
-    SIR = 0  # dB
+    SIR = 10  # dB
     SNR = (
         60
     )  # dB, this is the SNR with respect to a single target source and microphone self-noise
@@ -270,6 +270,9 @@ if __name__ == "__main__":
         SDR.append(sdr)
         SIR.append(sir)
 
+    if args.no_cb:
+        convergence_callback = None
+
     # START BSS
     ###########
 
@@ -287,30 +290,64 @@ if __name__ == "__main__":
     tic = time.perf_counter()
 
     # Run BSS
-    if args.algo == "auxiva":
+    if args.algo == "auxiva_laplace":
         # Run AuxIVA
-        Y = pra.bss.auxiva(
-            X_mics, n_iter=n_iter, proj_back=True, callback=convergence_callback
+        Y = auxiva(
+            X_mics, n_iter=n_iter, proj_back=True, model='laplace', callback=convergence_callback
+        )
+    elif args.algo == "auxiva_gauss":
+        # Run AuxIVA
+        Y = auxiva(
+            X_mics,
+            n_iter=n_iter,
+            proj_back=True,
+            model='gauss',
+            callback=convergence_callback,
+        )
+    elif args.algo == "auxiva_pca_laplace":
+        # Run AuxIVA
+        Y = auxiva_pca(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            model='laplace',
+            callback=convergence_callback,
+        )
+    elif args.algo == "auxiva_pca_gauss":
+        # Run AuxIVA
+        Y = auxiva_pca(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            model='gauss',
+            callback=convergence_callback,
+        )
+    elif args.algo == "oiva_laplace":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+            model='gauss',
+        )
+    elif args.algo == "oiva_gauss":
+        # Run AuxIVA
+        Y = oiva(
+            X_mics,
+            n_src=n_sources_target,
+            n_iter=n_iter,
+            proj_back=True,
+            callback=convergence_callback,
+            model='gauss',
         )
     elif args.algo == "auxiva_fast":
         # Run AuxIVA
         Y = auxiva_fast(
             X_mics, n_iter=n_iter, proj_back=True, callback=convergence_callback
-        )
-    elif args.algo == "auxiva_gpu":
-        # Run AuxIVA
-        Y = auxiva_gpu(
-            X_mics,
-            n_iter=n_iter,
-            proj_back=True,
-            gpu_id=2,
-        )
-    elif args.algo == "auxiva_gauss":
-        # Run AuxIVA
-        Y = auxiva_gauss(
-            X_mics,
-            n_iter=n_iter,
-            proj_back=True,
         )
     elif args.algo == "ilrma":
         # Run AuxIVA
@@ -320,25 +357,6 @@ if __name__ == "__main__":
             n_components=2,
             proj_back=True,
             callback=convergence_callback,
-        )
-    elif args.algo == "auxiva_pca":
-        # Run AuxIVA
-        Y = auxiva_pca(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-            model='gauss',
         )
     elif args.algo == "oiva_eig":
         # Run AuxIVA
@@ -371,28 +389,6 @@ if __name__ == "__main__":
             proj_back=True,
             callback=convergence_callback,
             model='laplace',
-        )
-    elif args.algo == "oiva_mix":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-            model='gauss',
-            update_mix=True,
-        )
-    elif args.algo == "oiva_lap_mix":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-            model='laplace',
-            update_mix=True,
         )
     elif args.algo == "oilrma":
         # Run AuxIVA

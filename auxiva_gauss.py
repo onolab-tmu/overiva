@@ -8,13 +8,14 @@ import numpy as np
 from pyroomacoustics import stft, istft
 from pyroomacoustics.bss import projection_back
 
-
-def auxiva_gauss(
+@profile
+def auxiva(
     X,
     n_src=None,
     n_iter=20,
     proj_back=True,
     W0=None,
+    model="laplace",
     return_filters=False,
     callback=None,
 ):
@@ -37,10 +38,8 @@ def auxiva_gauss(
         Scaling on first mic by back projection (default True)
     W0: ndarray (nfrequencies, nchannels, nchannels), optional
         Initial value for demixing matrix
-    f_contrast: dict of functions
-        A dictionary with two elements 'f' and 'df' containing the contrast
-        function taking 3 arguments This should be a ufunc acting element-wise
-        on any array
+    model: str
+        The model of source distribution 'gauss' or 'laplace' (default)
     return_filters: bool
         If true, the function will return the demixing matrix too
     callback: func
@@ -69,51 +68,54 @@ def auxiva_gauss(
         W = W0.copy()
 
     I = np.eye(n_src, n_src)
-    Y = np.zeros((n_frames, n_freq, n_src), dtype=X.dtype)
-    r = np.zeros((n_frames, n_src))
-    G_r = np.zeros((n_frames, n_src))
+    r_inv = np.zeros((n_frames, n_src))
+    V = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
+
+    # Things are more efficient when the frequencies are over the first axis
+    Y = np.zeros((n_freq, n_frames, n_src), dtype=X.dtype)
+    X = X.swapaxes(0, 1).copy()
 
     # Compute the demixed output
     def demix(Y, X, W):
-        for f in range(n_freq):
-            Y[:, f, :] = np.dot(X[:, f, :], np.conj(W[f, :, :]))
+        Y[:, :, :] = X @ np.conj(W)
 
     for epoch in range(n_iter):
 
         demix(Y, X, W)
 
         if callback is not None and epoch % 10 == 0:
+            Y_tmp = Y.swapaxes(0, 1)
             if proj_back:
-                z = projection_back(Y, X[:, :, 0])
-                callback(Y * np.conj(z[None, :, :]))
+                z = projection_back(Y_tmp, X[:, :, 0].swapaxes(0, 1))
+                callback(Y_tmp * np.conj(z[None, :, :]))
             else:
-                callback(Y)
+                callback(Y_tmp)
 
         # simple loop as a start
         # shape: (n_frames, n_src)
-        r[:, :] = np.mean(np.abs(Y * np.conj(Y)), axis=1)
-
-        # Compute Auxiliary Variable
-        # shape: (n_freq, n_src, n_src, n_src)
-        V = np.mean(
-            (0.5 * X[:, :, None, :, None] / r[:, None, :, None, None])
-            * np.conj(X[:, :, None, None, :]),
-            axis=0,
-        )
+        if model == 'laplace':
+            r_inv[:, :] = 1. / (2. * np.linalg.norm(Y, axis=0))
+        elif model == 'gauss':
+            r_inv[:, :] = n_freq / (np.linalg.norm(Y, axis=0) ** 2)
 
         # Update now the demixing matrix
         for s in range(n_src):
-            W_H = np.conj(np.swapaxes(W, 1, 2))
-            WV = np.matmul(W_H, V[:, s, :, :])
+            # Compute Auxiliary Variable
+            # shape: (n_freq, n_chan, n_chan)
+            V[:, :, :] = (X.swapaxes(1, 2) * r_inv[None, None, :, s]) @ np.conj(X) / n_frames
+
+            WV = np.conj(W).swapaxes(1, 2) @ V
             rhs = I[None, :, s][[0] * WV.shape[0], :]
             W[:, :, s] = np.linalg.solve(WV, rhs)
 
             # normalize
-            P1 = np.conj(W[:, :, s])
-            P2 = np.sum(V[:, s, :, :] * W[:, None, :, s], axis=-1)
-            W[:, :, s] /= np.sqrt(np.sum(P1 * P2, axis=1))[:, None]
+            denom = np.conj(W[:, None, :, s]) @ V[:, :, :] @ W[:, :, None, s]
+            W[:, :, s] /= np.sqrt(denom[:, :, 0])
 
     demix(Y, X, W)
+
+    Y = Y.swapaxes(0, 1).copy()
+    X = X.swapaxes(0, 1)
 
     if proj_back:
         z = projection_back(Y, X[:, :, 0])

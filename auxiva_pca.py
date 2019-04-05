@@ -6,7 +6,7 @@ Blind Source Separation using Independent Vector Analysis with Auxiliary Functio
 import numpy as np
 
 import pyroomacoustics as pra
-
+from auxiva_gauss import auxiva
 
 def auxiva_pca(X, n_src=None, **kwargs):
 
@@ -65,7 +65,7 @@ def auxiva_pca(X, n_src=None, **kwargs):
         new_X = X
 
     kwargs.pop('proj_back')
-    Y = pra.bss.auxiva(new_X, proj_back=False, **kwargs)
+    Y = auxiva(new_X, proj_back=False, **kwargs)
 
     z = pra.bss.projection_back(Y, X[:, :, 0])
     Y *= np.conj(z[None, :, :])
