@@ -31,12 +31,14 @@ from auxiva_pca import auxiva_pca
 from generate_samples import sampling, wav_read_center
 from auxiva_gpu import auxiva_gpu
 from auxiva_gauss import auxiva_gauss
+from auxiva_fast import auxiva_fast
 
 # We concatenate a few samples to make them long enough
 if __name__ == "__main__":
 
     choices = [
         "auxiva",
+        "auxiva_fast",
         "ilrma",
         "auxiva_pca",
         "auxiva_gauss",
@@ -99,7 +101,7 @@ if __name__ == "__main__":
     # absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 3  # the determined case
+    n_sources_target = 2  # the determined case
 
     use_fake_blinky = False
     use_real_R = False
@@ -111,7 +113,7 @@ if __name__ == "__main__":
     source_std = np.ones(n_sources_target)
     source_std[0] /= np.sqrt(2.0)
 
-    SIR = 10  # dB
+    SIR = 0  # dB
     SNR = (
         60
     )  # dB, this is the SNR with respect to a single target source and microphone self-noise
@@ -122,7 +124,7 @@ if __name__ == "__main__":
     win_s = pra.transform.compute_synthesis_window(win_a, framesize // 2)
 
     # algorithm parameters
-    n_iter = 31
+    n_iter = 51
     n_nmf_sub_iter = 100
     sparse_reg = 0.0
 
@@ -251,7 +253,10 @@ if __name__ == "__main__":
         global SDR, SIR, ref
         from mir_eval.separation import bss_eval_sources
 
-        y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s)
+        if Y.shape[2] == 1:
+            y = pra.transform.synthesis(Y[:, :, 0], framesize, framesize // 2, win=win_s)[:,None]
+        else:
+            y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s)
 
         if args.algo != "blinkiva":
             new_ord = np.argsort(np.std(y, axis=0))[::-1]
@@ -285,6 +290,11 @@ if __name__ == "__main__":
     if args.algo == "auxiva":
         # Run AuxIVA
         Y = pra.bss.auxiva(
+            X_mics, n_iter=n_iter, proj_back=True, callback=convergence_callback
+        )
+    elif args.algo == "auxiva_fast":
+        # Run AuxIVA
+        Y = auxiva_fast(
             X_mics, n_iter=n_iter, proj_back=True, callback=convergence_callback
         )
     elif args.algo == "auxiva_gpu":
@@ -466,9 +476,13 @@ if __name__ == "__main__":
     print('Processing time: {} s'.format(toc - tic))
 
     # Run iSTFT
-    y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s).astype(
-        np.float64
-    )
+    if Y.shape[2] == 1:
+        y = pra.transform.synthesis(Y[:, :, 0], framesize, framesize // 2, win=win_s)[:,None]
+        y = y.astype(np.float64)
+    else:
+        y = pra.transform.synthesis(Y, framesize, framesize // 2, win=win_s).astype(
+            np.float64
+        )
 
     # If some of the output are uniformly zero, just add a bit of noise to compare
     for k in range(y.shape[1]):

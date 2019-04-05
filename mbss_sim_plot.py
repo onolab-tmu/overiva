@@ -233,7 +233,9 @@ if __name__ == "__main__":
                 "ilrma": "ILRMA",
                 "oilrma": "od-ILRMA",
                 "oiva_laplace": "od-IVA (Laplace)",
+                "oiva_laplace_eig": "od-IVA (Laplace, eig. init.)",
                 "oiva_gauss": "od-IVA (Gauss)",
+                "oiva_gauss_eig": "od-IVA (Gauss, eig. init.)",
             }
         }
     )
@@ -241,9 +243,11 @@ if __name__ == "__main__":
     all_algos = [
         "AuxIVA (Laplace)",
         "od-IVA (Laplace)",
+        "od-IVA (Laplace, eig. init.)",
         "AuxIVA PCA (Laplace)",
         "AuxIVA (Gauss)",
         "od-IVA (Gauss)",
+        "od-IVA (Gauss, eig. init.)",
         "ILRMA",
         "od-ILRMA",
     ]
