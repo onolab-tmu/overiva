@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("TkAgg")
 
+import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -174,9 +175,11 @@ if __name__ == "__main__":
             "RT60",
             "SINR",
             "seed",
-            "Strength",
-            "SDR",
-            "SIR",
+            "Runtime [s]",
+            "SDR [dB]",
+            "SIR [dB]",
+            "SDR Improvement [dB]",
+            "SIR Improvement [dB]",
         ]
         table = []
         num_sources = set()
@@ -187,25 +190,31 @@ if __name__ == "__main__":
 
             entry = [record[field] for field in copy_fields]
 
+            # seconds processing / second of audio
+            entry += [record["runtime"] / record["n_samples"] * parameters["fs"]]
+
+            if np.isnan(record["runtime"]):
+                warnings.warn("NaN runtime: {}".format(record["algorithm"]))
+
+            if np.any(np.isnan(record["sdr"][-1])):
+                warnings.warn("NaN SDR: {}".format(record["algorithm"]))
+
+            if np.any(np.isnan(record["sir"][-1])):
+                warnings.warn("NaN SIR: {}".format(record["algorithm"]))
+
             try:
+                sdr_i = np.array(record["sdr"][0])  # Initial SDR
+                sdr_f = np.array(record["sdr"][-1])  # Final SDR
+                sir_i = np.array(record["sir"][0])  # Initial SDR
+                sir_f = np.array(record["sir"][-1])  # Final SDR
 
                 table.append(
-                    entry + ["Weak source", record["sdr"][-1][0], record["sir"][-1][0]]
-                )
-                table.append(
                     entry
                     + [
-                        "Strong sources (avg.)",
-                        np.mean(record["sdr"][-1][1:]),
-                        np.mean(record["sir"][-1][1:]),
-                    ]
-                )
-                table.append(
-                    entry
-                    + [
-                        "Average",
                         np.mean(record["sdr"][-1]),
                         np.mean(record["sir"][-1]),
+                        np.mean(sdr_f - sdr_i),
+                        np.mean(sir_f - sir_i),
                     ]
                 )
             except:
@@ -214,6 +223,7 @@ if __name__ == "__main__":
         # create a pandas frame
         print("Making PANDAS frame...")
         df = pd.DataFrame(table, columns=columns)
+        df_melt = df.melt(id_vars=df.columns[: len(copy_fields)], var_name="metric")
 
         df.to_pickle(pickle_file)
 
@@ -224,32 +234,27 @@ if __name__ == "__main__":
     # sns.plotting_context(context='poster', font_scale=2.)
     # pal = sns.cubehelix_palette(8, start=0.5, rot=-.75)
 
-    df = df.replace(
-        {
-            "Algorithm": {
-                "auxiva": "AuxIVA (Laplace)",
-                "auxiva_gauss": "AuxIVA (Gauss)",
-                "auxiva_pca": "AuxIVA PCA (Laplace)",
-                "ilrma": "ILRMA",
-                "oilrma": "od-ILRMA",
-                "oiva_laplace": "od-IVA (Laplace)",
-                "oiva_laplace_eig": "od-IVA (Laplace, eig. init.)",
-                "oiva_gauss": "od-IVA (Gauss)",
-                "oiva_gauss_eig": "od-IVA (Gauss, eig. init.)",
-            }
+    substitutions = {
+        "Algorithm": {
+            "auxiva_laplace": "AuxIVA (Laplace)",
+            "auxiva_gauss": "AuxIVA (Gauss)",
+            "auxiva_pca_laplace": "AuxIVA PCA (Laplace)",
+            "auxiva_pca_gauss": "AuxIVA PCA (Gauss)",
+            "oiva_laplace": "OIVA (Laplace)",
+            "oiva_gauss": "OIVA (Gauss)",
         }
-    )
+    }
+
+    df = df.replace(substitutions)
+    df_melt = df_melt.replace(substitutions)
 
     all_algos = [
         "AuxIVA (Laplace)",
-        "od-IVA (Laplace)",
-        "od-IVA (Laplace, eig. init.)",
+        "OIVA (Laplace)",
         "AuxIVA PCA (Laplace)",
         "AuxIVA (Gauss)",
-        "od-IVA (Gauss)",
-        "od-IVA (Gauss, eig. init.)",
-        "ILRMA",
-        "od-ILRMA",
+        "OIVA (Gauss)",
+        "AuxIVA PCA (Gauss)",
     ]
 
     sns.set(
@@ -278,56 +283,66 @@ if __name__ == "__main__":
 
     fn_tmp = os.path.join(fig_dir, "RT60_{rt60}_SINR_{sinr}_{metric}.pdf")
 
-    plt_kwargs = {
-        "SDR": {"ylim": [-5.5, 20.5], "yticks": [-5, 0, 5, 10, 15]},
-        "SIR": {"ylim": [-0.5, 40.5], "yticks": [0, 10, 20, 30]},
-    }
-    fig_cols = ["Average"]
-    full_width = 3.2  # inches
-    aspect = 1.5  # width / height
-    height = full_width / len(fig_cols) / aspect
+    n_cols = len(np.unique(df['Sources']))
+    full_width = 6.93  # inches, == 17.6 cm, double column width
+    aspect = 1.   # width / height
+    height = full_width / n_cols / aspect
 
     medians = {}
+    the_metrics = {
+        "improvements": ["SDR Improvement [dB]", "SIR Improvement [dB]"],
+        "raw": ["SDR [dB]", "SIR [dB]"],
+        "runtime": ["Runtime [s]"],
+    }
+
+    plt_kwargs = {
+        # "improvements": {"ylim": [-5.5, 20.5], "yticks": [-5, 0, 5, 10, 15]},
+        # "raw": {"ylim": [-5.5, 20.5], "yticks": [-5, 0, 5, 10, 15]},
+        # "runtime": {"ylim": [-0.5, 40.5], "yticks": [0, 10, 20, 30]},
+    }
 
     for rt60 in parameters["rt60_list"]:
         medians[rt60] = {}
         for sinr in parameters["sinr_list"]:
             medians[rt60][sinr] = {}
 
-            select = np.logical_and(df["RT60"] == rt60, df["SINR"] == sinr)
+            select = np.logical_and(df_melt["RT60"] == rt60, df_melt["SINR"] == sinr)
 
-            for metric in ["SDR", "SIR"]:
+            for m_name, metric in the_metrics.items():
 
                 g = sns.catplot(
-                    data=df[select],
+                    data=df_melt[select],
                     x="Mics",
-                    y=metric,
+                    y='value',
                     hue="Algorithm",
-                    col="Strength",
-                    row="Sources",
-                    col_order=fig_cols,
+                    col="Sources",
+                    row="metric",
+                    row_order=metric,
                     hue_order=all_algos,
                     kind="box",
                     legend=False,
                     aspect=aspect,
                     height=height,
                     linewidth=0.5,
-                    fliersize=0.5,
+                    fliersize=0.3,
+                    sharey="row",
                     # size=3, aspect=0.65,
+                    # margin_titles=True,
                 )
 
-                g.set(**plt_kwargs[metric])
+                if m_name in plt_kwargs:
+                    g.set(**plt_kwargs[metric])
                 g.set_titles("{row_name} sources | {col_name}")
 
                 all_artists = []
 
-                #left_ax = g.facet_axis(2, 0)
-                left_ax = g.facet_axis(0, 0)
+                # left_ax = g.facet_axis(2, 0)
+                left_ax = g.facet_axis(len(metric)-1, n_cols-1)
                 leg = left_ax.legend(
                     title="Algorithms",
                     frameon=True,
                     framealpha=0.85,
-                    # fontsize='small',
+                    fontsize='x-small',
                     loc="upper left",
                     bbox_to_anchor=[-0.05, 1.05],
                 )
@@ -338,32 +353,81 @@ if __name__ == "__main__":
 
                 plt.tight_layout(pad=0.01)
 
-                """
-                plt.subplots_adjust(top=0.9)
-                tit = g.fig.suptitle('# blinkies={}, RT60={}, SINR={}'.format(
-                    parameters['n_blinkies'], rt60, sinr
-                    ))
-                all_artists.append(tit)
-                """
+                for c, lbl in enumerate(metric):
+                    g_ax = g.facet_axis(c, 0)
+                    g_ax.set_ylabel(lbl)
 
                 rt60_name = str(int(float(rt60) * 1000)) + "ms"
-                fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric=metric)
+                fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric=m_name)
                 plt.savefig(fig_fn, bbox_extra_artists=all_artists, bbox_inches="tight")
+                plt.close()
 
                 # also get only the median information out
-                medians[rt60][sinr][metric] = []
+                medians[rt60][sinr][m_name] = []
                 for sub_df in g.facet_data():
-                    medians[rt60][sinr][metric].append(
+                    medians[rt60][sinr][m_name].append(
                         sub_df[1].pivot_table(
-                            values=metric,
+                            values="value",
                             columns="Mics",
-                            index=["Algorithm", "Sources", "RT60", "SINR", "Strength"],
+                            index=["Algorithm", "Sources", "RT60", "SINR", "metric"],
                             aggfunc="median",
                         )
                     )
 
+            # Now we want to analyze the median in a meaningful way
+            algo_merge = {
+                "AuxIVA (Laplace)": "AuxIVA",
+                "OIVA (Laplace)": "OIVA",
+                "AuxIVA PCA (Laplace)": "AuxIVA PCA",
+                "AuxIVA (Gauss)": "AuxIVA",
+                "OIVA (Gauss)": "OIVA",
+                "AuxIVA PCA (Gauss)": "AuxIVA PCA",
+            }
+            df_med = df[select].replace(algo_merge)
+            pvtb = df_med.pivot_table(
+                columns=["Algorithm", "Sources"],
+                index="Mics",
+                values="Runtime [s]",
+                aggfunc="median",
+            )
+
+            def proc_ratio(r):
+                pts = []
+                for src in np.unique(r.columns.get_level_values('Sources')):
+                    for mic in r.index:
+                        if not np.isnan(r[src][mic]):
+                            pts.append([src / mic, r[src][mic]])
+                arr = np.array(pts)
+                o = np.argsort(arr[:, 0])
+                return arr[o, :]
+
+            ratio_oiva = proc_ratio(pvtb["OIVA"] / pvtb["AuxIVA"])
+            ratio_pca = proc_ratio(pvtb["AuxIVA PCA"] / pvtb["AuxIVA"])
+
+            plt.figure()
+            plt.plot(ratio_oiva[:, 0], ratio_oiva[:, 1], 'o', label="OIVA", clip_on=False)
+            plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="AuxIVA PCA", clip_on=False)
+            plt.plot([0, 1], [0, 1], '--', label="$x=y$")
+            plt.xlim([0.0, 1.])
+            plt.ylim([-0.05, 1.3])
+            plt.xlabel('$K/M$')
+            plt.ylabel('Median runtime ratio to AuxIVA')
+            #plt.axis('equal')
+            plt.grid(False, axis='x')
+            sns.despine(offset=10, trim=False, left=True, bottom=True)
+            plt.legend()
+
+            rt60_name = str(int(float(rt60) * 1000)) + "ms"
+            fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric='runtime_ratio')
+            plt.savefig(fig_fn, bbox_inches="tight")
+            plt.close()
+            
+
+
     # fn_room_setup = os.path.join(fig_dir, 'room_setup.pdf')
     # plot_room_setup(fn_room_setup, 4, 4, parameters)
 
+    """
     if plot_flag:
         plt.show()
+    """
