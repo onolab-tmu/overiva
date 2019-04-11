@@ -31,6 +31,7 @@ from auxiva_pca import auxiva_pca
 from generate_samples import sampling, wav_read_center
 from auxiva_gauss import auxiva
 from auxiva_fast import auxiva_fast
+from ive import ogive
 
 # We concatenate a few samples to make them long enough
 if __name__ == "__main__":
@@ -56,6 +57,10 @@ if __name__ == "__main__":
         "sketch",
         "oiva_lap",
         "oiva_lap_eig",
+        "ogive_laplace_eig",
+        "ogive_laplace_eye",
+        "ogive_gauss_eig",
+        "ogive_gauss_eye",
     ]
 
     import argparse
@@ -103,7 +108,9 @@ if __name__ == "__main__":
     # absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 2  # the determined case
+    n_sources_target = 1  # the determined case
+    if args.algo.startswith("ogive"):
+        n_sources_target = 1
 
     use_fake_blinky = False
     use_real_R = False
@@ -461,6 +468,46 @@ if __name__ == "__main__":
             n_iter=n_iter,
             n_sup_iter=1,
             proj_back=True,
+            callback=convergence_callback,
+        )
+    elif args.algo == "ogive_laplace_eye":
+        # Run OGIVE
+        Y = ogive(
+            X_mics,
+            step_size=1e-4,
+            proj_back=True,
+            model='laplace',
+            init_eig=False,
+            callback=convergence_callback,
+        )
+    elif args.algo == "ogive_laplace_eig":
+        # Run OGIVE
+        Y = ogive(
+            X_mics,
+            step_size=1e-4,
+            proj_back=True,
+            model='laplace',
+            init_eig=True,
+            callback=convergence_callback,
+        )
+    elif args.algo == "ogive_gauss_eye":
+        # Run OGIVE
+        Y = ogive(
+            X_mics,
+            step_size=1e-4,
+            proj_back=True,
+            model='gauss',
+            init_eig=False,
+            callback=convergence_callback,
+        )
+    elif args.algo == "ogive_gauss_eig":
+        # Run OGIVE
+        Y = ogive(
+            X_mics,
+            step_size=1e-5,
+            proj_back=True,
+            model='gauss',
+            init_eig=True,
             callback=convergence_callback,
         )
     elif args.algo == "sketch":

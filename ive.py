@@ -8,10 +8,11 @@ import numpy as np
 from pyroomacoustics.bss import projection_back
 
 
-def oiva(
+def ogive(
     X,
-    n_src=None,
-    n_iter=20,
+    n_iter=4000,
+    step_size=1e-4,
+    tol=1e-3,
     proj_back=True,
     W0=None,
     model="laplace",
@@ -21,7 +22,9 @@ def oiva(
 ):
 
     """
-    Implementation of overdetermined IVA algorithm for BSS
+    Implementation of Orthogonally constrained Independent Vector Analysis
+
+
 
     Orthogonal constraints only
 
@@ -33,6 +36,10 @@ def oiva(
         The number of sources or independent components
     n_iter: int, optional
         The number of iterations (default 20)
+    step_size: float
+        The step size of the gradient ascent
+    tol: float
+        Stop when the gradient is smaller than this number
     proj_back: bool, optional
         Scaling on first mic by back projection (default True)
     W0: ndarray (nfrequencies, nsrc, nchannels), optional
@@ -57,52 +64,51 @@ def oiva(
     """
 
     n_frames, n_freq, n_chan = X.shape
-
-    # default to determined case
-    if n_src is None:
-        n_src = X.shape[2]
+    n_src = 1
 
     # covariance matrix of input signal (n_freq, n_chan, n_chan)
     Cx = np.mean(X[:, :, :, None] * np.conj(X[:, :, None, :]), axis=0)
+    Cx_inv = np.linalg.inv(Cx)
 
-    W_hat = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
-    W = W_hat[:, :, :n_src]
-    J = W_hat[:, :n_src, n_src:]
+    w = np.zeros((n_freq, n_chan, 1), dtype=X.dtype)
+    a = np.zeros((n_freq, n_chan, 1), dtype=X.dtype)
 
     def tensor_H(T):
         return np.conj(T).swapaxes(1, 2)
 
-    def update_J_from_orth_const():
-        tmp = np.matmul(tensor_H(W), Cx)
-        J[:, :, :] = np.linalg.solve(tmp[:, :, :n_src], tmp[:, :, n_src:])
-
     # initialize A and W
     if W0 is None:
-
         if init_eig:
-            # Initialize the demixing matrices with the principal
             # eigenvectors of the input covariance
-            v, w = np.linalg.eig(Cx)
+            eigval, eigvec = np.linalg.eig(Cx)
+            # lead_eigval = np.max(eigval, axis=1)
+            lead_eigvec = np.zeros((n_freq, n_chan), dtype=Cx.dtype)
             for f in range(n_freq):
-                ind = np.argsort(v[f])[-n_src:]
-                W[f, :, :] = np.conj(w[f][:, ind])
+                ind = np.argmax(eigval[f])
+                lead_eigvec[f, :] = eigvec[f, :, ind]
+
+            # Initialize the demixing matrices with the principal
+            # eigenvector
+            w[:, :, 0] = np.conj(lead_eigvec)
 
         else:
             # Or with identity
-            for f in range(n_freq):
-                W[f, :n_src, :] = np.eye(n_src)
+            w[:, 0] = 1.
 
     else:
-        W[:, :, :] = W0
+        w[:, :] = W0
 
-    # We still need to initialize the rest of the matrix
-    if n_src < n_chan:
-        update_J_from_orth_const()
-        for f in range(n_freq):
-            W_hat[f, n_src:, n_src:] = -np.eye(n_chan - n_src)
+    def update(v1, v2, C):
+        v_new = C @ v1
+        denom = tensor_H(v1) @ v_new
+        v2[:, :, :] = v_new / denom
 
-    eyes = np.tile(np.eye(n_chan, n_chan), (n_freq, 1, 1))
-    V = np.zeros((n_freq, n_chan, n_chan), dtype=X.dtype)
+    def update_a_from_w():
+        update(w, a, Cx)
+
+    def update_w_from_a():
+        update(a, w, Cx_inv)
+
     r_inv = np.zeros((n_frames, n_src))
     r = np.zeros((n_frames, n_src))
 
@@ -110,15 +116,22 @@ def oiva(
     Y = np.zeros((n_freq, n_frames, n_src), dtype=X.dtype)
     X = X.swapaxes(0, 1).copy()
 
+    '''
+    def switching_criterion():
+
+        b = Cx @ 
+        lmb = 
+    '''
+
     # Compute the demixed output
     def demix(Y, X, W):
         Y[:, :, :] = X @ np.conj(W)
 
     for epoch in range(n_iter):
 
-        demix(Y, X, W)
+        demix(Y, X, w)
 
-        if callback is not None and epoch % 10 == 0:
+        if callback is not None and epoch % 50 == 0:
             Y_tmp = Y.swapaxes(0, 1)
             if proj_back:
                 z = projection_back(Y_tmp, X[:, :, 0].swapaxes(0, 1))
@@ -137,31 +150,35 @@ def oiva(
         gamma = r.mean(axis=0)
         r /= gamma[None, :]
         Y /= np.sqrt(gamma[None, None, :])
-        W /= np.sqrt(gamma[None, None, :])
+        w /= np.sqrt(gamma[None, None, :])
 
         eps = 1e-15
         r[r < eps] = eps
 
         r_inv[:, :] = 1. / r
 
-        # Update now the demixing matrix
-        for s in range(n_src):
-            # Compute Auxiliary Variable
-            # shape: (n_freq, n_chan, n_chan)
-            V[:, :, :] = (X.swapaxes(1, 2) * r_inv[None, None, :, s]) @ np.conj(X) / n_frames
+        # apply OGIVE_w update (Algorithm 3 in [1])
+        update_a_from_w()
 
-            WV = np.conj(W_hat).swapaxes(1, 2) @ V
-            W[:, :, s] = np.linalg.solve(WV, eyes[:, :, s])
+        # "Nu" in Algo 3 in [1]
+        # shape (n_freq, 1, 1)
+        nu = (Y.swapaxes(1, 2) * r_inv[None, None, :, 0]) @ np.conj(Y) / n_frames
 
-            # normalize
-            denom = np.conj(W[:, None, :, s]) @ V[:, :, :] @ W[:, :, None, s]
-            W[:, :, s] /= np.sqrt(denom[:, :, 0])
+        # The step
+        # shape (n_freq, n_chan, 1)
+        delta = a - (X.swapaxes(1, 2) * r_inv[None, None, :, 0]) @ np.conj(Y) / nu / n_frames
 
-            # Update the mixing matrix according to orthogonal constraints
-            if n_src < n_chan:
-                update_J_from_orth_const()
+        w[:, :, :] += step_size * delta
 
-    demix(Y, X, W)
+        max_delta = np.max(np.linalg.norm(delta, axis=1))
+
+        if epoch % 10 == 0:
+            print(max_delta)
+
+        if max_delta < tol:
+            break
+
+    demix(Y, X, w)
 
     Y = Y.swapaxes(0, 1).copy()
     X = X.swapaxes(0, 1)
@@ -171,6 +188,6 @@ def oiva(
         Y *= np.conj(z[None, :, :])
 
     if return_filters:
-        return Y, W
+        return Y, w
     else:
         return Y

@@ -332,7 +332,7 @@ if __name__ == "__main__":
 
                 if m_name in plt_kwargs:
                     g.set(**plt_kwargs[metric])
-                g.set_titles("{row_name} sources | {col_name}")
+                g.set_titles("Sources={col_name}")
 
                 all_artists = []
 
@@ -344,9 +344,9 @@ if __name__ == "__main__":
                     framealpha=0.85,
                     fontsize='x-small',
                     loc="upper left",
-                    bbox_to_anchor=[-0.05, 1.05],
+                    # bbox_to_anchor=[-0.05, 1.05],
                 )
-                leg.get_frame().set_linewidth(0.0)
+                leg.get_frame().set_linewidth(0.2)
                 all_artists.append(leg)
 
                 sns.despine(offset=10, trim=False, left=True, bottom=True)
@@ -404,10 +404,10 @@ if __name__ == "__main__":
             ratio_oiva = proc_ratio(pvtb["OIVA"] / pvtb["AuxIVA"])
             ratio_pca = proc_ratio(pvtb["AuxIVA PCA"] / pvtb["AuxIVA"])
 
-            plt.figure()
+            plt.figure(figsize=(3.4, 2.8))
+            plt.plot([0, 1], [0, 1], '--', label="$x=y$")
             plt.plot(ratio_oiva[:, 0], ratio_oiva[:, 1], 'o', label="OIVA", clip_on=False)
             plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="AuxIVA PCA", clip_on=False)
-            plt.plot([0, 1], [0, 1], '--', label="$x=y$")
             plt.xlim([0.0, 1.])
             plt.ylim([-0.05, 1.3])
             plt.xlabel('$K/M$')
@@ -415,7 +415,7 @@ if __name__ == "__main__":
             #plt.axis('equal')
             plt.grid(False, axis='x')
             sns.despine(offset=10, trim=False, left=True, bottom=True)
-            plt.legend()
+            plt.legend(loc='upper left')
 
             rt60_name = str(int(float(rt60) * 1000)) + "ms"
             fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric='runtime_ratio')
