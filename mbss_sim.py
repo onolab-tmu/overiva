@@ -42,6 +42,7 @@ def one_loop(args):
     from routines import semi_circle_layout, random_layout, gm_layout, grid_layout
     from oiva import oiva
     from oilrma import oilrma
+    from ive import ogive
     from auxiva_gauss import auxiva
     from auxiva_pca import auxiva_pca
     from generate_samples import wav_read_center
@@ -222,6 +223,13 @@ def one_loop(args):
         name = params['algo']
         kwargs = params['kwargs']
 
+        if name == "auxiva_pca" and n_targets == 1:
+            # PCA doesn't work for single source scenario
+            continue
+        elif name == "ogive" and n_targets != 1:
+            # OGIVE is only for single target
+            continue
+
         results.append(
             {
                 "algorithm": full_name,
@@ -262,9 +270,11 @@ def one_loop(args):
 
             if name == "auxiva":
                 # Run AuxIVA
-                Y = auxiva(X_mics, callback=cb, **kwargs)
+                # this calls full IVA when `n_src` is not provided
+                Y = oiva(X_mics, callback=cb, **kwargs)
 
             elif name == "auxiva_pca":
+
                 # Run AuxIVA
                 Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
@@ -279,6 +289,10 @@ def one_loop(args):
             elif name == "oilrma":
                 # Run BlinkIVA
                 Y = oilrma(X_mics, n_src=n_targets, callback=cb, **kwargs)
+
+            elif name == "ogive":
+                # Run OGIVE
+                Y = ogive(X_mics, callback=cb, **kwargs)
 
             else:
                 continue

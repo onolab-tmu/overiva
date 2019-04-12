@@ -6,8 +6,6 @@
   "n_targets_list" : [1,2,3,4],
   "n_mics_list" : [2,3,4,5,6,7,8],
   "rt60_list" : {
-    "0.1" : { "max_order" : 10, "absorption" : 0.55 },
-    "0.2" : { "max_order" : 12, "absorption" : 0.45 },
     "0.3" : { "max_order" : 17, "absorption" : 0.35 }
   },
   "sinr_list" : [10],
@@ -75,6 +73,30 @@
         "init_eig" : false,
         "model" : "gauss"
       }
+    },
+    "ogive_laplace" : {
+      "algo" : "ogive",
+      "kwargs" : {
+        "n_iter": 4000,
+        "step_size": 0.1,
+        "tol": 1e-3,
+        "update": "demix",
+        "proj_back": true,
+        "model": "laplace",
+        "init_eig": false
+      }
+    },
+    "ogive_gauss" : {
+      "algo" : "ogive",
+      "kwargs" : {
+        "n_iter": 4000,
+        "step_size": 0.1,
+        "tol": 1e-3,
+        "update": "demix",
+        "proj_back": true,
+        "model": "gauss",
+        "init_eig": false
+      }
     }
   },
 
@@ -82,6 +104,8 @@
     "oiva_laplace",
     "oiva_gauss",
     "auxiva_pca_laplace",
-    "auxiva_pca_gauss"
+    "auxiva_pca_gauss",
+    "ogive_laplace",
+    "ogive_laplace_eig"
   ]
 }

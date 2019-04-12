@@ -60,7 +60,7 @@ def oiva(
 
     # default to determined case
     if n_src is None:
-        n_src = X.shape[2]
+        n_src = n_chan
 
     # covariance matrix of input signal (n_freq, n_chan, n_chan)
     Cx = np.mean(X[:, :, :, None] * np.conj(X[:, :, None, :]), axis=0)

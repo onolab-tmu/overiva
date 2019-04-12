@@ -4,6 +4,8 @@ Overdetermined Blind Source Separation offline example
 
 This script requires the `mir_eval` to run, and `tkinter` and `sounddevice` packages for the GUI option.
 """
+import matplotlib
+matplotlib.use('TkAgg')
 
 import numpy as np
 import time
@@ -136,6 +138,11 @@ if __name__ == "__main__":
     n_iter = 51
     n_nmf_sub_iter = 100
     sparse_reg = 0.0
+
+    # param ogive
+    ogive_mu = 0.1
+    ogive_update = "demix"
+    ogive_iter = 4000
 
     # pre-emphasis of blinky signals
     pre_emphasis = False
@@ -474,7 +481,9 @@ if __name__ == "__main__":
         # Run OGIVE
         Y = ogive(
             X_mics,
-            step_size=1e-4,
+            n_iter=ogive_iter,
+            step_size=ogive_mu,
+            update=ogive_update,
             proj_back=True,
             model='laplace',
             init_eig=False,
@@ -484,7 +493,9 @@ if __name__ == "__main__":
         # Run OGIVE
         Y = ogive(
             X_mics,
-            step_size=1e-4,
+            n_iter=ogive_iter,
+            step_size=ogive_mu,
+            update=ogive_update,
             proj_back=True,
             model='laplace',
             init_eig=True,
@@ -494,7 +505,9 @@ if __name__ == "__main__":
         # Run OGIVE
         Y = ogive(
             X_mics,
-            step_size=1e-4,
+            n_iter=ogive_iter,
+            step_size=ogive_mu,
+            update=ogive_update,
             proj_back=True,
             model='gauss',
             init_eig=False,
@@ -504,7 +517,9 @@ if __name__ == "__main__":
         # Run OGIVE
         Y = ogive(
             X_mics,
-            step_size=1e-5,
+            n_iter=ogive_iter,
+            step_size=ogive_mu,
+            update=ogive_update,
             proj_back=True,
             model='gauss',
             init_eig=True,
