@@ -136,9 +136,16 @@ def oiva(
         # set the scale of r
         gamma = r.mean(axis=0)
         r /= gamma[None, :]
-        Y /= np.sqrt(gamma[None, None, :])
-        W /= np.sqrt(gamma[None, None, :])
 
+        if model == 'laplace':
+            Y /= gamma[None, None, :]
+            W /= gamma[None, None, :]
+        elif model == 'gauss':
+            g_sq = np.sqrt(gamma[None, None, :])
+            Y /= g_sq
+            W /= g_sq
+
+        # ensure some numerical stability
         eps = 1e-15
         r[r < eps] = eps
 

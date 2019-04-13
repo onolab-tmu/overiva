@@ -103,12 +103,7 @@ def one_loop(args):
 
     source_locs = np.concatenate((target_locs, interferer_locs), axis=1)
 
-    mic_locs = np.vstack(
-        (
-            pra.circular_2D_array([4.1, 3.76], n_mics, np.pi / 2, 0.02),
-            1.2 * np.ones((1, n_mics)),
-        )
-    )
+    mic_locs = semi_circle_layout([4.1, 3.76, 1.2], np.pi, 0.04, n_mics, rot=np.pi / 2. * 0.99)
 
     signals = wav_read_center(wav_files, seed=123)
 

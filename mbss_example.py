@@ -110,7 +110,7 @@ if __name__ == "__main__":
     # absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 1  # the determined case
+    n_sources_target = 3  # the determined case
     if args.algo.startswith("ogive"):
         n_sources_target = 1
 
@@ -149,21 +149,7 @@ if __name__ == "__main__":
 
     # Geometry of the room and location of sources and microphones
     room_dim = np.array([10, 7.5, 3])
-    """
-    mic_locs = np.c_[
-            [4.03, 3.777, 1.1],
-            [4.015, 3.755, 1.1],
-            [4.03, 3.733, 1.1],
-            [4.025, 3.71, 1.1],
-            ]
-    mic_locs = mic_locs[:,:n_mics]
-    """
-    mic_locs = np.vstack(
-        (
-            pra.circular_2D_array([4.1, 3.76], n_mics, np.pi / 2, 0.02),
-            1.2 * np.ones((1, n_mics)),
-        )
-    )
+    mic_locs = semi_circle_layout([4.1, 3.76, 1.2], np.pi, 0.04, n_mics, rot=np.pi / 2. * 0.99)
 
     target_locs = semi_circle_layout(
         [4.1, 3.755, 1.1], np.pi / 2, 2.0, n_sources_target, rot=0.743 * np.pi

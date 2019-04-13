@@ -242,6 +242,8 @@ if __name__ == "__main__":
             "auxiva_pca_gauss": "AuxIVA PCA (Gauss)",
             "oiva_laplace": "OIVA (Laplace)",
             "oiva_gauss": "OIVA (Gauss)",
+            "ogive_laplace": "OGIVEw (Laplace)",
+            "ogive_gauss": "OGIVEw (Gauss)",
         }
     }
 
@@ -252,9 +254,12 @@ if __name__ == "__main__":
         "AuxIVA (Laplace)",
         "OIVA (Laplace)",
         "AuxIVA PCA (Laplace)",
+        "OGIVEw (Laplace)",
         "AuxIVA (Gauss)",
         "OIVA (Gauss)",
         "AuxIVA PCA (Gauss)",
+        "OGIVEw (Gauss)",
+
     ]
 
     sns.set(
@@ -379,9 +384,11 @@ if __name__ == "__main__":
                 "AuxIVA (Laplace)": "AuxIVA",
                 "OIVA (Laplace)": "OIVA",
                 "AuxIVA PCA (Laplace)": "AuxIVA PCA",
+                "OGIVEw (Laplace)": "OGIVEw",
                 "AuxIVA (Gauss)": "AuxIVA",
                 "OIVA (Gauss)": "OIVA",
                 "AuxIVA PCA (Gauss)": "AuxIVA PCA",
+                "OGIVEw (Gauss)": "OGIVEw",
             }
             df_med = df[select].replace(algo_merge)
             pvtb = df_med.pivot_table(
@@ -403,11 +410,13 @@ if __name__ == "__main__":
 
             ratio_oiva = proc_ratio(pvtb["OIVA"] / pvtb["AuxIVA"])
             ratio_pca = proc_ratio(pvtb["AuxIVA PCA"] / pvtb["AuxIVA"])
+            ratio_ogive = proc_ratio(pvtb["OGIVEw"] / pvtb["AuxIVA"])
 
             plt.figure(figsize=(3.4, 2.8))
             plt.plot([0, 1], [0, 1], '--', label="$x=y$")
             plt.plot(ratio_oiva[:, 0], ratio_oiva[:, 1], 'o', label="OIVA", clip_on=False)
             plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="AuxIVA PCA", clip_on=False)
+            plt.plot(ratio_ogive[:, 0], ratio_ogive[:, 1], 'x', label="OGIVEw", clip_on=False)
             plt.xlim([0.0, 1.])
             plt.ylim([-0.05, 1.3])
             plt.xlabel('$K/M$')
