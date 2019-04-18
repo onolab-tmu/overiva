@@ -238,10 +238,10 @@ if __name__ == "__main__":
         "Algorithm": {
             "auxiva_laplace": "AuxIVA (Laplace)",
             "auxiva_gauss": "AuxIVA (Gauss)",
-            "auxiva_pca_laplace": "AuxIVA PCA (Laplace)",
-            "auxiva_pca_gauss": "AuxIVA PCA (Gauss)",
-            "oiva_laplace": "OIVA (Laplace)",
-            "oiva_gauss": "OIVA (Gauss)",
+            "auxiva_pca_laplace": "PCA+AuxIVA (Laplace)",
+            "auxiva_pca_gauss": "PCA+AuxIVA (Gauss)",
+            "oiva_laplace": "OverIVA (Laplace)",
+            "oiva_gauss": "OverIVA (Gauss)",
             "ogive_laplace": "OGIVEw (Laplace)",
             "ogive_gauss": "OGIVEw (Gauss)",
         }
@@ -252,12 +252,12 @@ if __name__ == "__main__":
 
     all_algos = [
         "AuxIVA (Laplace)",
-        "OIVA (Laplace)",
-        "AuxIVA PCA (Laplace)",
+        "OverIVA (Laplace)",
+        "PCA+AuxIVA (Laplace)",
         "OGIVEw (Laplace)",
         "AuxIVA (Gauss)",
-        "OIVA (Gauss)",
-        "AuxIVA PCA (Gauss)",
+        "OverIVA (Gauss)",
+        "PCA+AuxIVA (Gauss)",
         "OGIVEw (Gauss)",
 
     ]
@@ -268,7 +268,7 @@ if __name__ == "__main__":
         font_scale=0.6,
         rc={
             #'figure.figsize': (3.39, 3.15),
-            #'lines.linewidth': 1.,
+            'lines.linewidth': 1.,
             #'font.family': 'sans-serif',
             #'font.sans-serif': [u'Helvetica'],
             #'text.usetex': False,
@@ -290,7 +290,7 @@ if __name__ == "__main__":
 
     n_cols = len(np.unique(df['Sources']))
     full_width = 6.93  # inches, == 17.6 cm, double column width
-    aspect = 1.   # width / height
+    aspect = 1.1   # width / height
     height = full_width / n_cols / aspect
 
     medians = {}
@@ -315,6 +315,8 @@ if __name__ == "__main__":
 
             for m_name, metric in the_metrics.items():
 
+                new_select = np.logical_and(select, df_melt.metric.isin(metric))
+
                 g = sns.catplot(
                     data=df_melt[select],
                     x="Mics",
@@ -332,12 +334,14 @@ if __name__ == "__main__":
                     fliersize=0.3,
                     sharey="row",
                     # size=3, aspect=0.65,
-                    # margin_titles=True,
+                    margin_titles=True,
                 )
 
                 if m_name in plt_kwargs:
                     g.set(**plt_kwargs[metric])
-                g.set_titles("Sources={col_name}")
+                # remove original titles before adding custom ones
+                [plt.setp(ax.texts, text="") for ax in g.axes.flat]
+                g.set_titles(col_template="Sources={col_name}", row_template="")
 
                 all_artists = []
 
@@ -349,7 +353,7 @@ if __name__ == "__main__":
                     framealpha=0.85,
                     fontsize='x-small',
                     loc="upper left",
-                    # bbox_to_anchor=[-0.05, 1.05],
+                    bbox_to_anchor=[-0.05, 1.35],
                 )
                 leg.get_frame().set_linewidth(0.2)
                 all_artists.append(leg)
@@ -382,14 +386,58 @@ if __name__ == "__main__":
             # Now we want to analyze the median in a meaningful way
             algo_merge = {
                 "AuxIVA (Laplace)": "AuxIVA",
-                "OIVA (Laplace)": "OIVA",
-                "AuxIVA PCA (Laplace)": "AuxIVA PCA",
+                "OverIVA (Laplace)": "OverIVA",
+                "PCA+AuxIVA (Laplace)": "PCA+AuxIVA",
                 "OGIVEw (Laplace)": "OGIVEw",
                 "AuxIVA (Gauss)": "AuxIVA",
-                "OIVA (Gauss)": "OIVA",
-                "AuxIVA PCA (Gauss)": "AuxIVA PCA",
+                "OverIVA (Gauss)": "OverIVA",
+                "PCA+AuxIVA (Gauss)": "PCA+AuxIVA",
                 "OGIVEw (Gauss)": "OGIVEw",
             }
+            # First plot for 1 source only
+            new_select = np.logical_and(select, df_melt['Sources'] == 1)
+            new_select = np.logical_and(new_select, df_melt['metric'] == 'Runtime [s]')
+            g = sns.catplot(
+                data=df_melt[new_select].replace(algo_merge),
+                x="Mics",
+                y='value',
+                hue="Algorithm",
+                col="Sources",
+                row="metric",
+                row_order=['Runtime [s]'],
+                # col_order=[1],
+                hue_order=['OGIVEw', 'AuxIVA', 'OverIVA'],
+                kind="point",
+                legend=False,
+                aspect=aspect,
+                height=height,
+                # linewidth=0.5,
+                estimator=np.median,
+                ci=None,
+                scale=0.75,
+                # fliersize=0.3,
+                sharey="row",
+                # size=3, aspect=0.65,
+                # margin_titles=True,
+            )
+            sns.despine(offset=10, trim=False, left=True, bottom=True)
+            left_ax = g.facet_axis(0, 0)
+            leg = left_ax.legend(
+                title="Algorithms",
+                frameon=True,
+                framealpha=0.85,
+                fontsize='x-small',
+                # loc="center left",
+                bbox_to_anchor=[0.4, 0.65],
+            )
+            leg.get_frame().set_linewidth(0.2)
+            g.set_titles("Single source")
+            g_ax = g.facet_axis(0, 0)
+            g_ax.set_ylabel('Real-time factor [s]')
+            fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric="runtime_agg")
+            plt.yticks([0., 1., 5., 10])
+            plt.savefig(fig_fn, bbox_inches="tight")
+
             df_med = df[select].replace(algo_merge)
             pvtb = df_med.pivot_table(
                 columns=["Algorithm", "Sources"],
@@ -408,23 +456,26 @@ if __name__ == "__main__":
                 o = np.argsort(arr[:, 0])
                 return arr[o, :]
 
-            ratio_oiva = proc_ratio(pvtb["OIVA"] / pvtb["AuxIVA"])
-            ratio_pca = proc_ratio(pvtb["AuxIVA PCA"] / pvtb["AuxIVA"])
+            ratio_oiva = proc_ratio(pvtb["OverIVA"] / pvtb["AuxIVA"])
+            ratio_pca = proc_ratio(pvtb["PCA+AuxIVA"] / pvtb["AuxIVA"])
             ratio_ogive = proc_ratio(pvtb["OGIVEw"] / pvtb["AuxIVA"])
 
-            plt.figure(figsize=(3.4, 2.8))
-            plt.plot([0, 1], [0, 1], '--', label="$x=y$")
-            plt.plot(ratio_oiva[:, 0], ratio_oiva[:, 1], 'o', label="OIVA", clip_on=False)
-            plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="AuxIVA PCA", clip_on=False)
-            plt.plot(ratio_ogive[:, 0], ratio_ogive[:, 1], 'x', label="OGIVEw", clip_on=False)
+            mrksz = 4
+            lw = 1.5
+
+            plt.figure(figsize=(height, height))
+            plt.plot([0, 1], [0, 1], '--', label="$x=y$", linewidth=lw)
+            plt.plot(ratio_oiva[:, 0], ratio_oiva[:, 1], 'o', label="OverIVA", clip_on=False, markersize=mrksz, linewidth=lw)
+            plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="PCA+AuxIVA", clip_on=False, markersize=mrksz, linewidth=lw)
             plt.xlim([0.0, 1.])
-            plt.ylim([-0.05, 1.3])
-            plt.xlabel('$K/M$')
+            plt.ylim([-0.05, 1.1])
+            plt.xlabel('Ratio of sources to microphones ($K/M$)')
             plt.ylabel('Median runtime ratio to AuxIVA')
-            #plt.axis('equal')
+            plt.axis('equal')
             plt.grid(False, axis='x')
             sns.despine(offset=10, trim=False, left=True, bottom=True)
-            plt.legend(loc='upper left')
+            leg = plt.legend(loc='upper left', bbox_to_anchor=[-0.05, 1])
+            leg.get_frame().set_linewidth(0.2)
 
             rt60_name = str(int(float(rt60) * 1000)) + "ms"
             fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric='runtime_ratio')
