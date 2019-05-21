@@ -13,6 +13,12 @@ from routines import (
     random_layout,
     gm_layout,
 )
+
+# Get the data if needed
+from get_data import get_data
+get_data()
+
+# Routines for manipulating audio samples
 from generate_samples import sampling, wav_read_center
 
 # find the absolute path to this file
@@ -41,9 +47,7 @@ def one_loop(args):
 
     from routines import semi_circle_layout, random_layout, gm_layout, grid_layout
     from oiva import oiva
-    from oilrma import oilrma
     from ive import ogive
-    from auxiva_gauss import auxiva
     from auxiva_pca import auxiva_pca
     from generate_samples import wav_read_center
 
@@ -280,10 +284,6 @@ def one_loop(args):
             elif name == "ilrma":
                 # Run AuxIVA
                 Y = pra.bss.ilrma(X_mics, callback=cb, **kwargs)
-
-            elif name == "oilrma":
-                # Run BlinkIVA
-                Y = oilrma(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
             elif name == "ogive":
                 # Run OGIVE

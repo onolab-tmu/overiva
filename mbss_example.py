@@ -5,7 +5,8 @@ Overdetermined Blind Source Separation offline example
 This script requires the `mir_eval` to run, and `tkinter` and `sounddevice` packages for the GUI option.
 """
 import matplotlib
-matplotlib.use('TkAgg')
+
+matplotlib.use("TkAgg")
 
 import numpy as np
 import time
@@ -21,49 +22,26 @@ from routines import (
     gm_layout,
 )
 from oiva import oiva
-from oiva2 import oiva2
-from oiva3 import oiva3
-from oiva4 import oiva4
-from oiva5 import oiva5
-from oiva6 import oiva6
-from oilrma import oilrma
-from oiva_group import oiva_group
-from sketch_auxiva import sketch_auxiva
 from auxiva_pca import auxiva_pca
 from generate_samples import sampling, wav_read_center
-from auxiva_gauss import auxiva
-from auxiva_fast import auxiva_fast
 from ive import ogive
+
+# Get the data if needed
+from get_data import get_data, samples_dir
+get_data()
 
 # We concatenate a few samples to make them long enough
 if __name__ == "__main__":
 
-    choices = [
-        "auxiva_laplace",
-        "auxiva_gauss",
-        "auxiva_pca_laplace",
-        "auxiva_pca_gauss",
-        "oiva_laplace",
-        "oiva_gauss",
-        "auxiva_fast",
-        "ilrma",
+    algo_choices = [
+        "auxiva",
+        "auxiva_pca",
         "oiva",
-        "oiva_eig",
-        "oiva2",
-        "oiva3",
-        "oiva4",
-        "oiva5",
-        "oiva6",
-        "oilrma",
-        "oivag",
-        "sketch",
-        "oiva_lap",
-        "oiva_lap_eig",
-        "ogive_laplace_eig",
-        "ogive_laplace_eye",
-        "ogive_gauss_eig",
-        "ogive_gauss_eye",
+        "ilrma",
+        "ogive",
     ]
+    model_choices = ['laplace', 'gauss']
+    init_choices = ['eye', 'eig']
 
     import argparse
 
@@ -78,11 +56,29 @@ if __name__ == "__main__":
         "-a",
         "--algo",
         type=str,
-        default=choices[0],
-        choices=choices,
+        default=algo_choices[0],
+        choices=algo_choices,
         help="Chooses BSS method to run",
     )
+    parser.add_argument(
+        "-d",
+        "--dist",
+        type=str,
+        default=model_choices[0],
+        choices=model_choices,
+        help="IVA model distribution",
+    )
+    parser.add_argument(
+        "-i",
+        "--init",
+        type=str,
+        default=init_choices[0],
+        choices=init_choices,
+        help="Initialization, eye: identity, eig: principal eigenvectors",
+    )
     parser.add_argument("-m", "--mics", type=int, default=5, help="Number of mics")
+    parser.add_argument("-s", "--srcs", type=int, default=2, help="Number of sources")
+    parser.add_argument("-n", "--n_iter", type=int, default=51, help="Number of iterations")
     parser.add_argument(
         "--gui",
         action="store_true",
@@ -94,6 +90,8 @@ if __name__ == "__main__":
         help="Saves the output of the separation to wav files",
     )
     args = parser.parse_args()
+
+    assert args.srcs <= args.mics, "More sources than microphones is not supported"
 
     if args.gui:
         print("setting tkagg backend")
@@ -110,7 +108,7 @@ if __name__ == "__main__":
     # absorption, max_order = 0.45, 12  # RT60 == 0.2
     n_sources = 14
     n_mics = args.mics
-    n_sources_target = 3  # the determined case
+    n_sources_target = args.srcs  # the determined case
     if args.algo.startswith("ogive"):
         n_sources_target = 1
 
@@ -135,7 +133,7 @@ if __name__ == "__main__":
     win_s = pra.transform.compute_synthesis_window(win_a, framesize // 2)
 
     # algorithm parameters
-    n_iter = 51
+    n_iter = args.n_iter
     n_nmf_sub_iter = 100
     sparse_reg = 0.0
 
@@ -149,7 +147,9 @@ if __name__ == "__main__":
 
     # Geometry of the room and location of sources and microphones
     room_dim = np.array([10, 7.5, 3])
-    mic_locs = semi_circle_layout([4.1, 3.76, 1.2], np.pi, 0.04, n_mics, rot=np.pi / 2. * 0.99)
+    mic_locs = semi_circle_layout(
+        [4.1, 3.76, 1.2], np.pi, 0.04, n_mics, rot=np.pi / 2.0 * 0.99
+    )
 
     target_locs = semi_circle_layout(
         [4.1, 3.755, 1.1], np.pi / 2, 2.0, n_sources_target, rot=0.743 * np.pi
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     wav_files = sampling(
         1,
         n_sources,
-        "../icassp2019-blinky-iva/samples/metadata.json",
+        f"{samples_dir}/metadata.json",
         gender_balanced=True,
         seed=16,
     )[0]
@@ -294,68 +294,35 @@ if __name__ == "__main__":
     tic = time.perf_counter()
 
     # Run BSS
-    if args.algo == "auxiva_laplace":
+    if args.algo == "auxiva":
         # Run AuxIVA
-        Y = auxiva(
+        Y = oiva(
             X_mics,
             n_iter=n_iter,
             proj_back=True,
-            model="laplace",
+            model=args.dist,
             callback=convergence_callback,
         )
-    elif args.algo == "auxiva_gauss":
-        # Run AuxIVA
-        Y = auxiva(
-            X_mics,
-            n_iter=n_iter,
-            proj_back=True,
-            model="gauss",
-            callback=convergence_callback,
-        )
-    elif args.algo == "auxiva_pca_laplace":
+    elif args.algo == "auxiva_pca":
         # Run AuxIVA
         Y = auxiva_pca(
             X_mics,
             n_src=n_sources_target,
             n_iter=n_iter,
             proj_back=True,
-            model="laplace",
+            model=args.dist,
             callback=convergence_callback,
         )
-    elif args.algo == "auxiva_pca_gauss":
-        # Run AuxIVA
-        Y = auxiva_pca(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            model="gauss",
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva_laplace":
+    elif args.algo == "oiva":
         # Run AuxIVA
         Y = oiva(
             X_mics,
             n_src=n_sources_target,
             n_iter=n_iter,
             proj_back=True,
+            model=args.dist,
+            init_eig=(args.init == init_choices[1]),
             callback=convergence_callback,
-            model="laplace",
-        )
-    elif args.algo == "oiva_gauss":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-            model="gauss",
-        )
-    elif args.algo == "auxiva_fast":
-        # Run AuxIVA
-        Y = auxiva_fast(
-            X_mics, n_iter=n_iter, proj_back=True, callback=convergence_callback
         )
     elif args.algo == "ilrma":
         # Run AuxIVA
@@ -366,104 +333,7 @@ if __name__ == "__main__":
             proj_back=True,
             callback=convergence_callback,
         )
-    elif args.algo == "oiva_eig":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            init_eig=False,
-            proj_back=True,
-            callback=convergence_callback,
-            model="gauss",
-        )
-    elif args.algo == "oiva_lap":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-            model="laplace",
-        )
-    elif args.algo == "oiva_lap_eig":
-        # Run AuxIVA
-        Y = oiva(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            init_eig=True,
-            proj_back=True,
-            callback=convergence_callback,
-            model="laplace",
-        )
-    elif args.algo == "oilrma":
-        # Run AuxIVA
-        Y = oilrma(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            n_components=4,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva2":
-        # Run AuxIVA
-        Y = oiva2(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva3":
-        # Run AuxIVA
-        Y = oiva3(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva4":
-        # Run AuxIVA
-        Y = oiva4(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva5":
-        # Run AuxIVA
-        Y = oiva5(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oiva6":
-        # Run AuxIVA
-        Y = oiva6(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "oivag":
-        # Run AuxIVA
-        Y = oiva_group(
-            X_mics,
-            n_src=n_sources_target,
-            n_iter=n_iter,
-            n_sup_iter=1,
-            proj_back=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "ogive_laplace_eye":
+    elif args.algo == "ogive":
         # Run OGIVE
         Y = ogive(
             X_mics,
@@ -471,53 +341,8 @@ if __name__ == "__main__":
             step_size=ogive_mu,
             update=ogive_update,
             proj_back=True,
-            model='laplace',
-            init_eig=False,
-            callback=convergence_callback,
-        )
-    elif args.algo == "ogive_laplace_eig":
-        # Run OGIVE
-        Y = ogive(
-            X_mics,
-            n_iter=ogive_iter,
-            step_size=ogive_mu,
-            update=ogive_update,
-            proj_back=True,
-            model='laplace',
-            init_eig=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "ogive_gauss_eye":
-        # Run OGIVE
-        Y = ogive(
-            X_mics,
-            n_iter=ogive_iter,
-            step_size=ogive_mu,
-            update=ogive_update,
-            proj_back=True,
-            model='gauss',
-            init_eig=False,
-            callback=convergence_callback,
-        )
-    elif args.algo == "ogive_gauss_eig":
-        # Run OGIVE
-        Y = ogive(
-            X_mics,
-            n_iter=ogive_iter,
-            step_size=ogive_mu,
-            update=ogive_update,
-            proj_back=True,
-            model='gauss',
-            init_eig=True,
-            callback=convergence_callback,
-        )
-    elif args.algo == "sketch":
-        # Run AuxIVA
-        Y = sketch_auxiva(
-            X_mics,
-            n_iter=n_iter,
-            proj_back=True,
-            sketch_f=5,
+            model=args.dist,
+            init_eig=(args.init == init_choices[1]),
             callback=convergence_callback,
         )
     else:
