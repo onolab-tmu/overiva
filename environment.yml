@@ -1,0 +1,11 @@
+name: 2019_icassp_scheibler_blinkyiva
+dependencies:
+  - python=3.7
+  - numpy
+  - scipy>=0.18.0
+  - matplotlib
+  - pip:
+    - pyroomacoustics=0.1.21
+    - sounddevice
+    - samplerate
+    - mir_eval
