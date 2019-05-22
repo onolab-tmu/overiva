@@ -36,6 +36,18 @@ System Design at [Tokyo Metropolitan University](https://www.tmu.ac.jp/english/i
     Hino, Tokyo
     191-0065 Japan
 
+Preliminaries
+-------------
+
+The preferred way to run the code is using [anaconda](https://www.anaconda.com/distribution/).
+An `environment.yml` file is provided to install the required dependencies.
+
+    # create the minimal environment
+    conda env create -f environment.yml
+
+    # switch to new environment
+    conda activate 2019_scheibler_overiva
+
 Test OverIVA
 ------------
 
@@ -71,6 +83,69 @@ script `overiva_oneshot.py`. It can be run as follows.
       --gui                 Creates a small GUI for easy playback of the sound
                             samples
       --save                Saves the output of the separation to wav files
+
+For example, we can run overiva with 4 microphones and 2 sources.
+
+    python ./overiva_oneshot.py -a overiva -m 4 -s 2
+
+Reproduce the Results
+---------------------
+
+The code can be run serially, or using multiple parallel workers via
+[ipyparallel](https://ipyparallel.readthedocs.io/en/latest/).
+Moreover, it is possible to only run a few loops to test whether the
+code is running or not.
+
+1. Run **test** loops **serially**
+
+        python ./overiva_sim.py ./overiva_sim_config.json -t -s
+
+2. Run **test** loops in **parallel**
+
+        # start workers in the background
+        # N is the number of parallel process, often "# threads - 1"
+        ipcluster start --daemonize -n N
+
+        # run the simulation
+        python ./overiva_sim.py ./overiva_sim_config.json -t
+
+        # stop the workers
+        ipcluster stop
+
+3. Run the whole simulation
+
+        # start workers in the background
+        # N is the number of parallel process, often "# threads - 1"
+        ipcluster start --daemonize -n N
+
+        # run the simulation
+        python ./overiva_sim.py ./overiva_sim_config.json
+
+        # stop the workers
+        ipcluster stop
+
+The results are saved in a new folder `data/<data>-<time>_overiva_sim_<flag_or_hash>`
+containing the following files
+
+    parameters.json  # the list of global parameters of the simulation
+    arguments.json  # the list of all combinations of arguments simulated
+    data.json  # the results of the simulation
+
+Figure 2. and 3. from the paper are produced then by running
+
+    python ./overiva_sim_plot.py data/<data>-<time>_overiva_sim_<flag_or_hash> -s
+
+Data
+----
+
+For the experiment, we concatenated utterances from the CMU ARCTIC speech corpus to
+obtain samples of at least 15 seconds long. The dataset thus created was stored on zenodo
+with DOI [10.5281/zenodo.3066488](https://zenodo.org/record/3066489). The data is automatically
+retrieved upon running the scripts, but can also be manually downloaded with the `get_data.py` script.
+
+    python ./get_data.py
+
+It is stored in the `samples` directory.
 
 Use OverIVA
 -----------
@@ -128,69 +203,6 @@ The function comes with docstrings.
     Returns an (nframes, nfrequencies, nsources) array. Also returns
     the demixing matrix (nfrequencies, nchannels, nsources)
     if ``return_values`` keyword is True.
-
-Reproduce the Results
----------------------
-
-The preferred way is to use [anaconda](https://www.anaconda.com/distribution/).
-
-    conda env create -f environment.yml
-
-The code can be run serially, or using multiple parallel workers via
-[ipyparallel](https://ipyparallel.readthedocs.io/en/latest/).
-Moreover, it is possible to only run a few loops to test whether the
-code is running or not.
-
-1. Run **test** loops **serially**
-
-        python ./overiva_sim.py ./overiva_sim_config.json -t -s
-
-2. Run **test** loops in **parallel**
-
-        # start workers in the background
-        # N is the number of parallel process, often "# threads - 1"
-        ipcluster start --daemonize -n N
-
-        # run the simulation
-        python ./overiva_sim.py ./overiva_sim_config.json -t
-
-        # stop the workers
-        ipcluster stop
-
-3. Run the whole simulation
-
-        # start workers in the background
-        # N is the number of parallel process, often "# threads - 1"
-        ipcluster start --daemonize -n N
-
-        # run the simulation
-        python ./overiva_sim.py ./overiva_sim_config.json
-
-        # stop the workers
-        ipcluster stop
-
-The results are saved in a new folder `data/<data>-<time>_overiva_sim_<flag_or_hash>`
-containing the following files
-
-    parameters.json  # the list of global parameters of the simulation
-    arguments.json  # the list of all combinations of arguments simulated
-    data.json  # the results of the simulation
-
-Figure 2. and 3. from the paper are produced then by running
-
-    python ./overiva_sim_plot.py data/<data>-<time>_overiva_sim_<flag_or_hash> -s
-
-Data
-----
-
-For the experiment, we concatenated utterances from the CMU ARCTIC speech corpus to
-obtain samples of at least 15 seconds long. The dataset thus created was stored on zenodo
-with DOI [10.5281/zenodo.3066488](https://zenodo.org/record/3066489). The data is automatically
-retrieved upon running the scripts, but can also be manually downloaded with the `get_data.py` script.
-
-    python ./get_data.py
-
-It is stored in the `samples` directory.
 
 Summary of the Files in this Repo
 ---------------------------------
