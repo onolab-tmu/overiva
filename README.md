@@ -191,3 +191,22 @@ retrieved upon running of the scripts, but can be also manually downloaded with 
     python ./get_data.py
 
 It is stored in the `samples` directory.
+
+Summary of the Files in this Repo
+---------------------------------
+
+		environment.yml  # anaconda environment file
+
+		auxiva_pca.py  # implementation of AuxIVA with PCA dim reduction step
+		ive.py  # implementation of orthogonally constrained independent vector extraction (OGIVE)
+		overiva.py  # implementation of the proposed overdetermined IVA
+		get_data.py  # script that gets the data necessary for the experiment
+		routines.py  # contains a bunch of helper routines for the simulation
+
+		overiva_oneshot.py  # test file for source separation, with audible output
+		overiva_sim.py  # script to run exhaustive simulation, used for the paper
+		overiva_sim_config.json  # simulation configuration file
+		overiva_sim_plot.py  # plots the figures from the output of overiva_sim.py
+
+		data  # directory containing simulation results
+		rrtools  # tools for parallel simulation
