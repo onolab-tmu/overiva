@@ -4,7 +4,7 @@ Independent Vector Analysis with more Microphones than Sources
 This repository provides implementations and code to reproduce the results
 of the paper
 
-> Robin Scheibler and Nobutaka Ono, *"Independent Vector Analysis with more Microphones than Sources,"* Submitted to WASPAA 2019, 2019.
+> R. Scheibler and N. Ono, [*"Independent Vector Analysis with more Microphones than Sources,"*](https://arxiv.org/abs/1905.07880) Submitted to WASPAA 2019, 2019.
 
 Abstract
 --------
@@ -50,7 +50,7 @@ code is running or not.
 
 1. Run **test** loops **serially**
 
-        python ./mbss_sim.py ./mbss_sim_config.json -t -s
+        python ./overiva_sim.py ./overiva_sim_config.json -t -s
 
 2. Run **test** loops in **parallel**
 
@@ -59,7 +59,7 @@ code is running or not.
         ipcluster start --daemonize -n N
 
         # run the simulation
-        python ./mbss_sim.py ./mbss_sim_config.json -t
+        python ./overiva_sim.py ./overiva_sim_config.json -t
 
         # stop the workers
         ipcluster stop
@@ -71,18 +71,30 @@ code is running or not.
         ipcluster start --daemonize -n N
 
         # run the simulation
-        python ./mbss_sim.py ./mbss_sim_config.json
+        python ./overiva_sim.py ./overiva_sim_config.json
 
         # stop the workers
         ipcluster stop
 
-The results are saved in a new folder `data/<data>-<time>_mbss_sim_<flag_or_hash>`
+The results are saved in a new folder `data/<data>-<time>_overiva_sim_<flag_or_hash>`
 containing the following files
 
         parameters.json  # the list of global parameters of the simulation
         arguments.json  # the list of all combinations of arguments simulated
         data.json  # the results of the simulation
 
-Figure 3. from the paper is produced then by running
+Figure 2. and 3. from the paper are produced then by running
 
-        python ./mbss_sim_plot.py data/<data>-<time>_mbss_sim_<flag_or_hash> -s
+        python ./overiva_sim_plot.py data/<data>-<time>_overiva_sim_<flag_or_hash> -s
+
+Data
+----
+
+For the experiment, we concatenated utterances from the CMU ARCTIC speech corpus to
+obtain samples of at least 15 seconds long. The dataset thus created was stored on zenodo
+with DOI [10.5281/zenodo.3066488](https://zenodo.org/record/3066489). The data is automatically
+retrieved upon running of the scripts, but can be also manually downloaded with the `get_data.py` script.
+
+    python ./get_data.py
+
+It is stored in the `samples` directory.
