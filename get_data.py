@@ -38,6 +38,7 @@ def get_data():
         # change the directory name to the desired one
         dl_dir = os.listdir(temp_dir)[0]
         os.rename(os.path.join(temp_dir, dl_dir), samples_dir)
+        os.rmdir(temp_dir)
         print("done.")
 
 
