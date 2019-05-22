@@ -46,7 +46,7 @@ def one_loop(args):
     sys.path.append(parameters["base_dir"])
 
     from routines import semi_circle_layout, random_layout, gm_layout, grid_layout
-    from oiva import oiva
+    from overiva import overiva
     from ive import ogive
     from auxiva_pca import auxiva_pca
     from generate_samples import wav_read_center
@@ -270,16 +270,16 @@ def one_loop(args):
             if name == "auxiva":
                 # Run AuxIVA
                 # this calls full IVA when `n_src` is not provided
-                Y = oiva(X_mics, callback=cb, **kwargs)
+                Y = overiva(X_mics, callback=cb, **kwargs)
 
             elif name == "auxiva_pca":
 
                 # Run AuxIVA
                 Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-            elif name == "oiva":
+            elif name == "overiva":
                 # Run BlinkIVA
-                Y = oiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
+                Y = overiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
             elif name == "ilrma":
                 # Run AuxIVA

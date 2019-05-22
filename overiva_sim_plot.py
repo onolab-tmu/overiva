@@ -240,8 +240,8 @@ if __name__ == "__main__":
             "auxiva_gauss": "AuxIVA (Gauss)",
             "auxiva_pca_laplace": "PCA+AuxIVA (Laplace)",
             "auxiva_pca_gauss": "PCA+AuxIVA (Gauss)",
-            "oiva_laplace": "OverIVA (Laplace)",
-            "oiva_gauss": "OverIVA (Gauss)",
+            "overiva_laplace": "OverIVA (Laplace)",
+            "overiva_gauss": "OverIVA (Gauss)",
             "ogive_laplace": "OGIVEw (Laplace)",
             "ogive_gauss": "OGIVEw (Gauss)",
         }
@@ -456,7 +456,7 @@ if __name__ == "__main__":
                 o = np.argsort(arr[:, 0])
                 return arr[o, :]
 
-            ratio_oiva = proc_ratio(pvtb["OverIVA"] / pvtb["AuxIVA"])
+            ratio_overiva = proc_ratio(pvtb["OverIVA"] / pvtb["AuxIVA"])
             ratio_pca = proc_ratio(pvtb["PCA+AuxIVA"] / pvtb["AuxIVA"])
             ratio_ogive = proc_ratio(pvtb["OGIVEw"] / pvtb["AuxIVA"])
 
@@ -465,7 +465,7 @@ if __name__ == "__main__":
 
             plt.figure(figsize=(height, height))
             plt.plot([0, 1], [0, 1], '--', label="$x=y$", linewidth=lw)
-            plt.plot(ratio_oiva[:, 0], ratio_oiva[:, 1], 'o', label="OverIVA", clip_on=False, markersize=mrksz, linewidth=lw)
+            plt.plot(ratio_overiva[:, 0], ratio_overiva[:, 1], 'o', label="OverIVA", clip_on=False, markersize=mrksz, linewidth=lw)
             plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="PCA+AuxIVA", clip_on=False, markersize=mrksz, linewidth=lw)
             plt.xlim([0.0, 1.])
             plt.ylim([-0.05, 1.1])

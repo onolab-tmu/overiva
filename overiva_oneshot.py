@@ -21,7 +21,7 @@ from routines import (
     random_layout,
     gm_layout,
 )
-from oiva import oiva
+from overiva import overiva
 from auxiva_pca import auxiva_pca
 from generate_samples import sampling, wav_read_center
 from ive import ogive
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     algo_choices = [
         "auxiva",
         "auxiva_pca",
-        "oiva",
+        "overiva",
         "ilrma",
         "ogive",
     ]
@@ -296,7 +296,7 @@ if __name__ == "__main__":
     # Run BSS
     if args.algo == "auxiva":
         # Run AuxIVA
-        Y = oiva(
+        Y = overiva(
             X_mics,
             n_iter=n_iter,
             proj_back=True,
@@ -313,9 +313,9 @@ if __name__ == "__main__":
             model=args.dist,
             callback=convergence_callback,
         )
-    elif args.algo == "oiva":
+    elif args.algo == "overiva":
         # Run AuxIVA
-        Y = oiva(
+        Y = overiva(
             X_mics,
             n_src=n_sources_target,
             n_iter=n_iter,

@@ -75,8 +75,8 @@
         "model": "gauss"
       }
     },
-    "oiva_laplace": {
-      "algo": "oiva",
+    "overiva_laplace": {
+      "algo": "overiva",
       "kwargs": {
         "n_iter": 100,
         "proj_back": true,
@@ -84,8 +84,8 @@
         "model": "laplace"
       }
     },
-    "oiva_gauss": {
-      "algo": "oiva",
+    "overiva_gauss": {
+      "algo": "overiva",
       "kwargs": {
         "n_iter": 100,
         "proj_back": true,
@@ -119,8 +119,8 @@
     }
   },
   "overdet_algos": [
-    "oiva_laplace",
-    "oiva_gauss",
+    "overiva_laplace",
+    "overiva_gauss",
     "auxiva_pca_laplace",
     "auxiva_pca_gauss",
     "ogive_laplace",
@@ -128,7 +128,7 @@
   ],
   "_git_sha": "7f0a832cbb",
   "_date": "20190413-145735",
-  "_base_dir": "/home/robin/oiva",
-  "_results_dir": "/home/robin/oiva/data/20190413-145735_mbss_sim_7f0a832cbb/",
+  "_base_dir": "/home/robin/overiva",
+  "_results_dir": "/home/robin/overiva/data/20190413-145735_mbss_sim_7f0a832cbb/",
   "_parallel": true
 }

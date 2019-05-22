@@ -56,8 +56,8 @@
         "model" : "gauss"
       }
     },
-    "oiva_laplace" : {
-      "algo" : "oiva",
+    "overiva_laplace" : {
+      "algo" : "overiva",
       "kwargs" : {
         "n_iter" : 100,
         "proj_back" : true,
@@ -65,8 +65,8 @@
         "model" : "laplace"
       }
     },
-    "oiva_gauss" : {
-      "algo" : "oiva",
+    "overiva_gauss" : {
+      "algo" : "overiva",
       "kwargs" : {
         "n_iter" : 100,
         "proj_back" : true,
@@ -101,8 +101,8 @@
   },
 
   "overdet_algos" : [
-    "oiva_laplace",
-    "oiva_gauss",
+    "overiva_laplace",
+    "overiva_gauss",
     "auxiva_pca_laplace",
     "auxiva_pca_gauss",
     "ogive_laplace",

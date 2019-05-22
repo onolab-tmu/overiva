@@ -8,7 +8,7 @@ import numpy as np
 from pyroomacoustics.bss import projection_back
 
 
-def oiva(
+def overiva(
     X,
     n_src=None,
     n_iter=20,
