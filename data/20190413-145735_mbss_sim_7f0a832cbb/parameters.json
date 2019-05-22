@@ -1,5 +1,5 @@
 {
-  "name": "mbss_sim",
+  "name": "overiva_sim",
   "n_repeat": 50,
   "seed": 12345,
   "n_targets_list": [

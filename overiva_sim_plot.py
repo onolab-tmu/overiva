@@ -259,7 +259,6 @@ if __name__ == "__main__":
         "OverIVA (Gauss)",
         "PCA+AuxIVA (Gauss)",
         "OGIVEw (Gauss)",
-
     ]
 
     sns.set(
@@ -268,7 +267,7 @@ if __name__ == "__main__":
         font_scale=0.6,
         rc={
             #'figure.figsize': (3.39, 3.15),
-            'lines.linewidth': 1.,
+            "lines.linewidth": 1.0,
             #'font.family': 'sans-serif',
             #'font.sans-serif': [u'Helvetica'],
             #'text.usetex': False,
@@ -288,9 +287,9 @@ if __name__ == "__main__":
 
     fn_tmp = os.path.join(fig_dir, "RT60_{rt60}_SINR_{sinr}_{metric}.pdf")
 
-    n_cols = len(np.unique(df['Sources']))
+    n_cols = len(np.unique(df["Sources"]))
     full_width = 6.93  # inches, == 17.6 cm, double column width
-    aspect = 1.1   # width / height
+    aspect = 1.1  # width / height
     height = full_width / n_cols / aspect
 
     medians = {}
@@ -320,7 +319,7 @@ if __name__ == "__main__":
                 g = sns.catplot(
                     data=df_melt[select],
                     x="Mics",
-                    y='value',
+                    y="value",
                     hue="Algorithm",
                     col="Sources",
                     row="metric",
@@ -346,12 +345,12 @@ if __name__ == "__main__":
                 all_artists = []
 
                 # left_ax = g.facet_axis(2, 0)
-                left_ax = g.facet_axis(len(metric)-1, n_cols-1)
+                left_ax = g.facet_axis(len(metric) - 1, n_cols - 1)
                 leg = left_ax.legend(
                     title="Algorithms",
                     frameon=True,
                     framealpha=0.85,
-                    fontsize='x-small',
+                    fontsize="x-small",
                     loc="upper left",
                     bbox_to_anchor=[-0.05, 1.35],
                 )
@@ -395,18 +394,18 @@ if __name__ == "__main__":
                 "OGIVEw (Gauss)": "OGIVEw",
             }
             # First plot for 1 source only
-            new_select = np.logical_and(select, df_melt['Sources'] == 1)
-            new_select = np.logical_and(new_select, df_melt['metric'] == 'Runtime [s]')
+            new_select = np.logical_and(select, df_melt["Sources"] == 1)
+            new_select = np.logical_and(new_select, df_melt["metric"] == "Runtime [s]")
             g = sns.catplot(
                 data=df_melt[new_select].replace(algo_merge),
                 x="Mics",
-                y='value',
+                y="value",
                 hue="Algorithm",
                 col="Sources",
                 row="metric",
-                row_order=['Runtime [s]'],
+                row_order=["Runtime [s]"],
                 # col_order=[1],
-                hue_order=['OGIVEw', 'AuxIVA', 'OverIVA'],
+                hue_order=["OGIVEw", "AuxIVA", "OverIVA"],
                 kind="point",
                 legend=False,
                 aspect=aspect,
@@ -426,19 +425,19 @@ if __name__ == "__main__":
                 title="Algorithms",
                 frameon=True,
                 framealpha=0.85,
-                fontsize='x-small',
+                fontsize="x-small",
                 # loc="center left",
                 bbox_to_anchor=[0.4, 0.65],
             )
             leg.get_frame().set_linewidth(0.2)
             g.set_titles("Single source")
             g_ax = g.facet_axis(0, 0)
-            g_ax.set_ylabel('Real-time factor [s]')
+            g_ax.set_ylabel("Real-time factor [s]")
             fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric="runtime_agg")
-            plt.yticks([0., 1., 5., 10])
+            plt.yticks([0.0, 1.0, 5.0, 10])
             plt.savefig(fig_fn, bbox_inches="tight")
 
-            df_med = df[select].replace(algo_merge)
+            df_med = df.loc[select].replace(algo_merge)
             pvtb = df_med.pivot_table(
                 columns=["Algorithm", "Sources"],
                 index="Mics",
@@ -448,7 +447,7 @@ if __name__ == "__main__":
 
             def proc_ratio(r):
                 pts = []
-                for src in np.unique(r.columns.get_level_values('Sources')):
+                for src in np.unique(r.columns.get_level_values("Sources")):
                     for mic in r.index:
                         if not np.isnan(r[src][mic]):
                             pts.append([src / mic, r[src][mic]])
@@ -464,30 +463,39 @@ if __name__ == "__main__":
             lw = 1.5
 
             plt.figure(figsize=(height, height))
-            plt.plot([0, 1], [0, 1], '--', label="$x=y$", linewidth=lw)
-            plt.plot(ratio_overiva[:, 0], ratio_overiva[:, 1], 'o', label="OverIVA", clip_on=False, markersize=mrksz, linewidth=lw)
-            plt.plot(ratio_pca[:, 0], ratio_pca[:, 1], 'x', label="PCA+AuxIVA", clip_on=False, markersize=mrksz, linewidth=lw)
-            plt.xlim([0.0, 1.])
+            plt.plot([0, 1], [0, 1], "--", label="$x=y$", linewidth=lw)
+            plt.plot(
+                ratio_overiva[:, 0],
+                ratio_overiva[:, 1],
+                "o",
+                label="OverIVA",
+                clip_on=False,
+                markersize=mrksz,
+                linewidth=lw,
+            )
+            plt.plot(
+                ratio_pca[:, 0],
+                ratio_pca[:, 1],
+                "x",
+                label="PCA+AuxIVA",
+                clip_on=False,
+                markersize=mrksz,
+                linewidth=lw,
+            )
+            plt.xlim([0.0, 1.0])
             plt.ylim([-0.05, 1.1])
-            plt.xlabel('Ratio of sources to microphones ($K/M$)')
-            plt.ylabel('Median runtime ratio to AuxIVA')
-            plt.axis('equal')
-            plt.grid(False, axis='x')
+            plt.xlabel("Ratio of sources to microphones ($K/M$)")
+            plt.ylabel("Median runtime ratio to AuxIVA")
+            plt.axis("equal")
+            plt.grid(False, axis="x")
             sns.despine(offset=10, trim=False, left=True, bottom=True)
-            leg = plt.legend(loc='upper left', bbox_to_anchor=[-0.05, 1])
+            leg = plt.legend(loc="upper left", bbox_to_anchor=[-0.05, 1])
             leg.get_frame().set_linewidth(0.2)
 
             rt60_name = str(int(float(rt60) * 1000)) + "ms"
-            fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric='runtime_ratio')
+            fig_fn = fn_tmp.format(rt60=rt60_name, sinr=sinr, metric="runtime_ratio")
             plt.savefig(fig_fn, bbox_inches="tight")
             plt.close()
-            
 
-
-    # fn_room_setup = os.path.join(fig_dir, 'room_setup.pdf')
-    # plot_room_setup(fn_room_setup, 4, 4, parameters)
-
-    """
     if plot_flag:
         plt.show()
-    """
