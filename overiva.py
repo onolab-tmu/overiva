@@ -49,7 +49,9 @@ def overiva(
     X: ndarray (nframes, nfrequencies, nchannels)
         STFT representation of the signal
     n_src: int, optional
-        The number of sources or independent components
+        The number of sources or independent components. When
+        ``n_src==nchannels``, the algorithms is identical to AuxIVA. When
+        ``n_src==1``, then it is doing independent vector extraction.
     n_iter: int, optional
         The number of iterations (default 20)
     proj_back: bool, optional
