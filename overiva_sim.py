@@ -1,7 +1,27 @@
+# Copyright (c) 2019 Robin Scheibler
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 """
-This file contains the code to run the more systematic simulation.
+This file contains the code to run the systematic simulation for evaluation
+of overiva and other algorithms.
 """
-import argparse, json, os
+import argparse, json, os, sys
 import numpy as np
 import pyroomacoustics as pra
 import rrtools
@@ -15,10 +35,11 @@ from routines import (
 )
 
 # Get the data if needed
-from get_data import get_data
+from get_data import get_data, samples_dir
 get_data()
 
 # Routines for manipulating audio samples
+sys.path.append(samples_dir)
 from generate_samples import sampling, wav_read_center
 
 # find the absolute path to this file
@@ -46,9 +67,13 @@ def one_loop(args):
     sys.path.append(parameters["base_dir"])
 
     from routines import semi_circle_layout, random_layout, gm_layout, grid_layout
-    from oiva import oiva
+    from overiva import overiva
     from ive import ogive
     from auxiva_pca import auxiva_pca
+
+    # import samples helper routine
+    from get_data import samples_dir
+    sys.path.append(samples_dir)
     from generate_samples import wav_read_center
 
     n_targets, n_mics, rt60, sinr, wav_files, seed = args
@@ -270,16 +295,16 @@ def one_loop(args):
             if name == "auxiva":
                 # Run AuxIVA
                 # this calls full IVA when `n_src` is not provided
-                Y = oiva(X_mics, callback=cb, **kwargs)
+                Y = overiva(X_mics, callback=cb, **kwargs)
 
             elif name == "auxiva_pca":
 
                 # Run AuxIVA
                 Y = auxiva_pca(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
-            elif name == "oiva":
+            elif name == "overiva":
                 # Run BlinkIVA
-                Y = oiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
+                Y = overiva(X_mics, n_src=n_targets, callback=cb, **kwargs)
 
             elif name == "ilrma":
                 # Run AuxIVA
@@ -377,5 +402,5 @@ if __name__ == "__main__":
         func_init=init,
         base_dir=base_dir,
         results_dir="data/",
-        description="Simulation for Multi-modal BSS with blinkies (ICASSP 2019)",
+        description="Simulation for Independent Vector Analysis with more Microphones than Sources (submitted WASPAA 2019)",
     )

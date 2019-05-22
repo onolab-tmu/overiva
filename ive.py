@@ -1,7 +1,28 @@
+# Copyright (c) 2019 Robin Scheibler
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 """
-Blind Source Separation using Independent Vector Analysis with Auxiliary Function
+Blind Source Extraction using Independent Vector Extraction via the OGIVE algorithm [1].
 
-2018 (c) Robin Scheibler, MIT License
+[1]	Z. Koldovský and P. Tichavský, “Gradient Algorithms for Complex
+Non-Gaussian Independent Component/Vector Extraction, Question of Convergence,”
+IEEE Trans. Signal Process., pp. 1050–1064, Dec. 2018.
 """
 import numpy as np
 
@@ -23,11 +44,12 @@ def ogive(
 ):
 
     """
-    Implementation of Orthogonally constrained Independent Vector Analysis
+    Implementation of Orthogonally constrained Independent Vector Extraction
+    (OGIVE) described in
 
-
-
-    Orthogonal constraints only
+    Z. Koldovský and P. Tichavský, “Gradient Algorithms for Complex
+    Non-Gaussian Independent Component/Vector Extraction, Question of Convergence,”
+    IEEE Trans. Signal Process., pp. 1050–1064, Dec. 2018.
 
     Parameters
     ----------
@@ -115,13 +137,13 @@ def ogive(
 
     def update_a_from_w(I):
         v_new = Cx[I] @ w[I]
-        lambda_w = 1. / np.real(tensor_H(w[I]) @ v_new)
+        lambda_w = 1.0 / np.real(tensor_H(w[I]) @ v_new)
         a[I, :, :] = lambda_w * v_new
 
     def update_w_from_a(I):
         v_new = Cx_inv[I] @ a[I]
-        lambda_a[I] = 1. / np.real(tensor_H(a[I]) @ v_new)
-        w[I,:,:] = lambda_a[I] * v_new
+        lambda_a[I] = 1.0 / np.real(tensor_H(a[I]) @ v_new)
+        w[I, :, :] = lambda_a[I] * v_new
 
     # The very first update of a
     update_a_from_w(np.ones(n_freq, dtype=np.bool))
@@ -143,10 +165,14 @@ def ogive(
         a_n = a / a[:, :1, :1]
         b_n = Cx @ a_n
         lmb = b_n[:, :1, :1]
-        b_n /= lmb;
+        b_n /= lmb
 
         p1 = np.linalg.norm(a_n - b_n, axis=(1, 2))
-        Cbb = lmb * (b_n @ tensor_H(b_n)) / np.linalg.norm(b_n, axis=(1, 2), keepdims=True) ** 2
+        Cbb = (
+            lmb
+            * (b_n @ tensor_H(b_n))
+            / np.linalg.norm(b_n, axis=(1, 2), keepdims=True) ** 2
+        )
         p2 = np.linalg.norm(Cx - Cbb, axis=(1, 2))
 
         kappa = p1 * p2 / Cx_norm / np.sqrt(n_chan)
@@ -166,7 +192,7 @@ def ogive(
         # Apply the orthogonal constraints
         update_a_from_w(I_do_w)
         update_w_from_a(I_do_a)
-        
+
         # Extract the target signal
         demix(Y, X, w)
 
@@ -219,7 +245,7 @@ def ogive(
     # Apply the orthogonal constraints
     update_a_from_w(I_do_w)
     update_w_from_a(I_do_a)
-        
+
     # Extract target
     demix(Y, X, w)
 

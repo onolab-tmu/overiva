@@ -1,14 +1,31 @@
+# Copyright (c) 2019 Robin Scheibler
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 """
-Blind Source Separation using Independent Vector Analysis with Auxiliary Function
-
-2018 (c) Robin Scheibler, MIT License
+Implementation of overdetermined independent vector extraction based on auxilliary function.
 """
 import numpy as np
 
 from pyroomacoustics.bss import projection_back
 
 
-def oiva(
+def overiva(
     X,
     n_src=None,
     n_iter=20,
@@ -21,16 +38,20 @@ def oiva(
 ):
 
     """
-    Implementation of overdetermined IVA algorithm for BSS
+    Implementation of overdetermined IVA algorithm for BSS as presented. See
+    the following publication for a detailed description of the algorithm.
 
-    Orthogonal constraints only
+    R. Scheibler and N. Ono, Independent Vector Analysis with more Microphones than Sources, arXiv, 2019.
+    https://arxiv.org/abs/1905.07880
 
     Parameters
     ----------
     X: ndarray (nframes, nfrequencies, nchannels)
         STFT representation of the signal
     n_src: int, optional
-        The number of sources or independent components
+        The number of sources or independent components. When
+        ``n_src==nchannels``, the algorithms is identical to AuxIVA. When
+        ``n_src==1``, then it is doing independent vector extraction.
     n_iter: int, optional
         The number of iterations (default 20)
     proj_back: bool, optional
