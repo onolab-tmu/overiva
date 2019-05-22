@@ -1,3 +1,22 @@
+# Copyright (c) 2019 Robin Scheibler
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 """
 Overdetermined Blind Source Separation offline example
 ======================================================
@@ -9,7 +28,7 @@ import matplotlib
 matplotlib.use("TkAgg")
 
 import numpy as np
-import time
+import time, sys
 from scipy.io import wavfile
 
 from mir_eval.separation import bss_eval_sources
@@ -23,12 +42,16 @@ from routines import (
 )
 from overiva import overiva
 from auxiva_pca import auxiva_pca
-from generate_samples import sampling, wav_read_center
 from ive import ogive
 
 # Get the data if needed
 from get_data import get_data, samples_dir
 get_data()
+
+# Once we are sure the data is there, import some methods
+# to select and read samples
+sys.path.append(samples_dir)
+from generate_samples import sampling, wav_read_center
 
 # We concatenate a few samples to make them long enough
 if __name__ == "__main__":
@@ -46,7 +69,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Demonstration of blind source separation using IVA or ILRMA."
+        description="Demonstration of blind source separation using IVA."
     )
     parser.add_argument(
         "--no_cb", action="store_true", help="Removes callback function"
@@ -159,17 +182,6 @@ if __name__ == "__main__":
         [3.0, 5.5, 1.5], n_sources - n_sources_target, offset=[6.5, 1.0, 0.5], seed=1
     )
     source_locs = np.concatenate((target_locs, interferer_locs), axis=1)
-    # source_locs[2,:] += np.random.uniform(-0.02, 0.02, size=n_sources)
-    """
-    source_locs = np.c_[
-            [3., 4.,  1.7],  # target source 1
-            [3., 6.,  1.7],  # target source 2
-            [2., 1.5, 1.9],  # interferer 1
-            [4., 1.5, 1.9],  # interferer 1
-            [6., 1.5, 1.9],  # interferer 1
-            [8., 1.5, 1.9],  # interferer 1
-            ]
-    """
 
     # Prepare the signals
     wav_files = sampling(
