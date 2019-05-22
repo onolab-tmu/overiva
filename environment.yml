@@ -3,7 +3,9 @@ dependencies:
   - python=3.7
   - numpy
   - scipy>=0.18.0
+  - mkl-service
   - matplotlib
+  - ipyparallel
   - pip
   - pip:
     - gitpython
