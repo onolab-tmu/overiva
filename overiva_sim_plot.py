@@ -301,6 +301,9 @@ if __name__ == "__main__":
     )
     sns.set_palette(pal)
 
+    if not os.path.exists("figures"):
+        os.mkdir("figures")
+
     fig_dir = "figures/{}_{}_{}".format(
         parameters["name"], parameters["_date"], parameters["_git_sha"]
     )
