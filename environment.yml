@@ -4,9 +4,10 @@ dependencies:
   - numpy
   - scipy>=0.18.0
   - matplotlib
+  - pip
   - pip:
     - gitpython
-    - pyroomacoustics=0.1.23
+    - pyroomacoustics==0.1.23
     - sounddevice
     - samplerate
     - mir_eval
