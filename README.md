@@ -4,7 +4,7 @@ Independent Vector Analysis with more Microphones than Sources
 This repository provides implementations and code to reproduce the results
 of the paper
 
-> R. Scheibler and N. Ono, [*"Independent Vector Analysis with more Microphones than Sources,"*](https://arxiv.org/abs/1905.07880), 2019.
+> R. Scheibler and N. Ono, [*"Independent Vector Analysis with more Microphones than Sources,"*](https://arxiv.org/abs/1905.07880) 2019.
 
 Abstract
 --------
