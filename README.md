@@ -4,7 +4,7 @@ Independent Vector Analysis with more Microphones than Sources
 This repository provides implementations and code to reproduce the results
 of the paper
 
-> R. Scheibler and N. Ono, [*"Independent Vector Analysis with more Microphones than Sources,"*](https://arxiv.org/abs/1905.07880) Submitted to WASPAA 2019, 2019.
+> R. Scheibler and N. Ono, [*"Independent Vector Analysis with more Microphones than Sources,"*](https://arxiv.org/abs/1905.07880), 2019.
 
 Abstract
 --------
@@ -88,46 +88,46 @@ It can be used simply like this.
 
 The function comes with docstrings.
 
-		overiva(X, n_src=None, n_iter=20, proj_back=True, W0=None, model="laplace",
-						init_eig=False, return_filters=False, callback=None,)
+    overiva(X, n_src=None, n_iter=20, proj_back=True, W0=None, model="laplace",
+            init_eig=False, return_filters=False, callback=None,)
 
-		Implementation of overdetermined IVA algorithm for BSS as presented. See
-		the following publication for a detailed description of the algorithm.
+    Implementation of overdetermined IVA algorithm for BSS as presented. See
+    the following publication for a detailed description of the algorithm.
 
-		R. Scheibler and N. Ono, Independent Vector Analysis with more Microphones than Sources, arXiv, 2019.
-		https://arxiv.org/abs/1905.07880
+    R. Scheibler and N. Ono, Independent Vector Analysis with more Microphones than Sources, arXiv, 2019.
+    https://arxiv.org/abs/1905.07880
 
-		Parameters
-		----------
-		X: ndarray (nframes, nfrequencies, nchannels)
-		    STFT representation of the signal
-		n_src: int, optional
-		    The number of sources or independent components. When
-		    ``n_src==nchannels``, the algorithms is identical to AuxIVA. When
-		    ``n_src==1``, then it is doing independent vector extraction.
-		n_iter: int, optional
-		    The number of iterations (default 20)
-		proj_back: bool, optional
-		    Scaling on first mic by back projection (default True)
-		W0: ndarray (nfrequencies, nsrc, nchannels), optional
-		    Initial value for demixing matrix
-		model: str
-		    The model of source distribution 'gauss' or 'laplace' (default)
-		init_eig: bool, optional (default ``False``)
-		    If ``True``, and if ``W0 is None``, then the weights are initialized
-		    using the principal eigenvectors of the covariance matrix of the input
-		    data.
-		return_filters: bool
-		    If true, the function will return the demixing matrix too
-		callback: func
-		    A callback function called every 10 iterations, allows to monitor
-		    convergence
+    Parameters
+    ----------
+    X: ndarray (nframes, nfrequencies, nchannels)
+        STFT representation of the signal
+    n_src: int, optional
+        The number of sources or independent components. When
+        ``n_src==nchannels``, the algorithms is identical to AuxIVA. When
+        ``n_src==1``, then it is doing independent vector extraction.
+    n_iter: int, optional
+        The number of iterations (default 20)
+    proj_back: bool, optional
+        Scaling on first mic by back projection (default True)
+    W0: ndarray (nfrequencies, nsrc, nchannels), optional
+        Initial value for demixing matrix
+    model: str
+        The model of source distribution 'gauss' or 'laplace' (default)
+    init_eig: bool, optional (default ``False``)
+        If ``True``, and if ``W0 is None``, then the weights are initialized
+        using the principal eigenvectors of the covariance matrix of the input
+        data.
+    return_filters: bool
+        If true, the function will return the demixing matrix too
+    callback: func
+        A callback function called every 10 iterations, allows to monitor
+        convergence
 
-		Returns
-		-------
-		Returns an (nframes, nfrequencies, nsources) array. Also returns
-		the demixing matrix (nfrequencies, nchannels, nsources)
-		if ``return_values`` keyword is True.
+    Returns
+    -------
+    Returns an (nframes, nfrequencies, nsources) array. Also returns
+    the demixing matrix (nfrequencies, nchannels, nsources)
+    if ``return_values`` keyword is True.
 
 Reproduce the Results
 ---------------------
@@ -172,13 +172,13 @@ code is running or not.
 The results are saved in a new folder `data/<data>-<time>_overiva_sim_<flag_or_hash>`
 containing the following files
 
-        parameters.json  # the list of global parameters of the simulation
-        arguments.json  # the list of all combinations of arguments simulated
-        data.json  # the results of the simulation
+    parameters.json  # the list of global parameters of the simulation
+    arguments.json  # the list of all combinations of arguments simulated
+    data.json  # the results of the simulation
 
 Figure 2. and 3. from the paper are produced then by running
 
-        python ./overiva_sim_plot.py data/<data>-<time>_overiva_sim_<flag_or_hash> -s
+    python ./overiva_sim_plot.py data/<data>-<time>_overiva_sim_<flag_or_hash> -s
 
 Data
 ----
@@ -186,7 +186,7 @@ Data
 For the experiment, we concatenated utterances from the CMU ARCTIC speech corpus to
 obtain samples of at least 15 seconds long. The dataset thus created was stored on zenodo
 with DOI [10.5281/zenodo.3066488](https://zenodo.org/record/3066489). The data is automatically
-retrieved upon running of the scripts, but can be also manually downloaded with the `get_data.py` script.
+retrieved upon running the scripts, but can also be manually downloaded with the `get_data.py` script.
 
     python ./get_data.py
 
@@ -195,18 +195,18 @@ It is stored in the `samples` directory.
 Summary of the Files in this Repo
 ---------------------------------
 
-		environment.yml  # anaconda environment file
+    environment.yml  # anaconda environment file
 
-		auxiva_pca.py  # implementation of AuxIVA with PCA dim reduction step
-		ive.py  # implementation of orthogonally constrained independent vector extraction (OGIVE)
-		overiva.py  # implementation of the proposed overdetermined IVA
-		get_data.py  # script that gets the data necessary for the experiment
-		routines.py  # contains a bunch of helper routines for the simulation
+    auxiva_pca.py  # implementation of AuxIVA with PCA dim reduction step
+    ive.py  # implementation of orthogonally constrained independent vector extraction (OGIVE)
+    overiva.py  # implementation of the proposed overdetermined IVA
+    get_data.py  # script that gets the data necessary for the experiment
+    routines.py  # contains a bunch of helper routines for the simulation
 
-		overiva_oneshot.py  # test file for source separation, with audible output
-		overiva_sim.py  # script to run exhaustive simulation, used for the paper
-		overiva_sim_config.json  # simulation configuration file
-		overiva_sim_plot.py  # plots the figures from the output of overiva_sim.py
+    overiva_oneshot.py  # test file for source separation, with audible output
+    overiva_sim.py  # script to run exhaustive simulation, used for the paper
+    overiva_sim_config.json  # simulation configuration file
+    overiva_sim_plot.py  # plots the figures from the output of overiva_sim.py
 
-		data  # directory containing simulation results
-		rrtools  # tools for parallel simulation
+    data  # directory containing simulation results
+    rrtools  # tools for parallel simulation
