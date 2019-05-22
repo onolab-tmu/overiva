@@ -5,9 +5,11 @@ dependencies:
   - scipy>=0.18.0
   - mkl-service
   - matplotlib
+  - pandas
   - ipyparallel
   - pip
   - pip:
+    - seaborn==0.9.0
     - gitpython
     - pyroomacoustics==0.1.23
     - sounddevice
