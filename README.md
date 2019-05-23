@@ -55,8 +55,6 @@ The algorithm can be tested and compared to others using the sample
 script `overiva_oneshot.py`. It can be run as follows.
 
     $ python ./overiva_oneshot.py --help
-    The samples directory {samples_dir} seems to exist already.
-    Delete first for re-downloading.
     usage: overiva_oneshot.py [-h] [--no_cb] [-b BLOCK]
                               [-a {auxiva,auxiva_pca,overiva,ilrma,ogive}]
                               [-d {laplace,gauss}] [-i {eye,eig}] [-m MICS]
