@@ -33,6 +33,7 @@ from scipy.io import wavfile
 
 from mir_eval.separation import bss_eval_sources
 
+import matwrap
 from routines import (
     PlaySoundGUI,
     grid_layout,
@@ -42,7 +43,7 @@ from routines import (
 )
 from overiva import overiva
 from auxiva_pca import auxiva_pca
-from ive import ogive
+from ive import ogive, ogive_matlab_wrapper
 
 # Get the data if needed
 from get_data import get_data, samples_dir
@@ -62,6 +63,7 @@ if __name__ == "__main__":
         "overiva",
         "ilrma",
         "ogive",
+        "ogive_matlab",
     ]
     model_choices = ['laplace', 'gauss']
     init_choices = ['eye', 'eig']
@@ -162,7 +164,7 @@ if __name__ == "__main__":
 
     # param ogive
     ogive_mu = 0.1
-    ogive_update = "demix"
+    ogive_update = "switching"
     ogive_iter = 4000
 
     # pre-emphasis of blinky signals
@@ -189,7 +191,7 @@ if __name__ == "__main__":
         n_sources,
         f"{samples_dir}/metadata.json",
         gender_balanced=True,
-        seed=16,
+        seed=3,
     )[0]
     signals = wav_read_center(wav_files, seed=123)
 
@@ -354,6 +356,17 @@ if __name__ == "__main__":
             update=ogive_update,
             proj_back=True,
             model=args.dist,
+            init_eig=(args.init == init_choices[1]),
+            callback=convergence_callback,
+        )
+    elif args.algo == "ogive_matlab":
+        # Run OGIVE
+        Y = ogive_matlab_wrapper(
+            X_mics,
+            n_iter=ogive_iter,
+            step_size=ogive_mu,
+            update=ogive_update,
+            proj_back=True,
             init_eig=(args.init == init_choices[1]),
             callback=convergence_callback,
         )
