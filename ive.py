@@ -135,10 +135,9 @@ def ogive(
         a[I, :, :] = lambda_w * v_new
 
     def update_w_from_a(I):
-        lambda_a[:] = 0.0
-        v_new = Cx_inv[I] @ a[I]
-        lambda_a[I] = 1.0 / np.real(tensor_H(a[I]) @ v_new)
-        w[I, :, :] = lambda_a[I] * v_new
+        v_new = Cx_inv @ a
+        lambda_a[:] = 1.0 / np.real(tensor_H(a) @ v_new)
+        w[I, :, :] = lambda_a[I] * v_new[I]
 
     def switching_criterion():
 
@@ -188,10 +187,6 @@ def ogive(
         if update == "switching" and epoch % 10 == 0:
             switching_criterion()
 
-        # Apply the orthogonal constraints
-        update_a_from_w(I_do_w)
-        update_w_from_a(I_do_a)
-
         # Extract the target signal
         demix(Y, X, w)
 
@@ -236,14 +231,14 @@ def ogive(
         delta[I_do_a] = w[I_do_a] - (Cx_inv[I_do_a] @ x_psi[I_do_a]) * lambda_a[I_do_a]
         a[I_do_a] += step_size * delta[I_do_a]
 
+        # Apply the orthogonal constraints
+        update_a_from_w(I_do_w)
+        update_w_from_a(I_do_a)
+
         max_delta = np.max(np.linalg.norm(delta, axis=(1, 2)))
 
         if max_delta < tol:
             break
-
-    # Apply the orthogonal constraints
-    update_a_from_w(I_do_w)
-    update_w_from_a(I_do_a)
 
     # Extract target
     demix(Y, X, w)

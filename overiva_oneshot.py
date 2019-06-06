@@ -164,7 +164,7 @@ if __name__ == "__main__":
     # param ogive
     ogive_mu = 0.1
     ogive_update = "switching"
-    ogive_iter = 1000
+    ogive_iter = 2000
 
     # pre-emphasis of blinky signals
     pre_emphasis = False
