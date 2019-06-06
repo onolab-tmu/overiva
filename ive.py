@@ -391,7 +391,7 @@ def ogive_matlab_wrapper(
     a[:, :, :] = lambda_w * v_new
 
     with matwrap.connect_matlab() as eng:
-        # add path to Zbynek's functions
+        # add folder to MATLAB path
         eng.addpath(ogive_folder)
 
         # function [w, a, shat, NumIt] = ogive_a(x, mu, aini, MaxIt, nonln)
@@ -402,17 +402,17 @@ def ogive_matlab_wrapper(
         aini = matwrap.ndarray_to_matlab(a[:, :, 0].T)
 
         if update == "switching":
-            # Run the MATLAB versio no OGIVE a written by Zbynek
+            # Run the MATLAB version of OGIVE, switched updates of mix/demix vector
             w, a, shat, numit = eng.ogive_s(
                 X_matlab, step_size, aini, n_iter, "sign", nargout=4
             )
         elif update == "mix":
-            # Run the MATLAB versio no OGIVE a written by Zbynek
+            # Run the MATLAB version of OGIVE_a, updates of mix vector
             w, a, shat, numit = eng.ogive_a(
                 X_matlab, step_size, aini, n_iter, "sign", nargout=4
             )
         elif update == "demix":
-            # Run the MATLAB versio no OGIVE w written by Zbynek
+            # Run the MATLAB versio of OGIVE_w, updates of demix vector
             w, a, shat, numit = eng.ogive_w(
                 X_matlab, step_size, aini, n_iter, "sign", nargout=4
             )
