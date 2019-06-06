@@ -29,8 +29,6 @@ import numpy as np
 
 from pyroomacoustics.bss import projection_back
 
-import matwrap
-
 
 def ogive(
     X,
@@ -137,7 +135,7 @@ def ogive(
         a[I, :, :] = lambda_w * v_new
 
     def update_w_from_a(I):
-        lambda_a[:] = 0.
+        lambda_a[:] = 0.0
         v_new = Cx_inv[I] @ a[I]
         lambda_a[I] = 1.0 / np.real(tensor_H(a[I]) @ v_new)
         w[I, :, :] = lambda_a[I] * v_new
@@ -329,11 +327,16 @@ def ogive_matlab_wrapper(
     the demixing matrix (nfrequencies, nchannels, nsources)
     if ``return_values`` keyword is True.
     """
+    try:
+        import matwrap
+    except ImportError:
+        raise ValueError("MATLAB and the Python/MATLAB interface should be installed.")
 
     if not os.path.exists(ogive_folder):
         from urllib.request import urlopen
         from io import BytesIO
         from zipfile import ZipFile
+
         data_url = "https://asap.ite.tul.cz/wp-content/uploads/sites/3/2018/10/OGIVEalgorithms.zip"
         zf = ZipFile(BytesIO(urlopen(data_url).read()))
         zf.extractall(ogive_folder)
@@ -400,13 +403,19 @@ def ogive_matlab_wrapper(
 
         if update == "switching":
             # Run the MATLAB versio no OGIVE a written by Zbynek
-            w, a, shat, numit = eng.ogive_s(X_matlab, step_size, aini, n_iter, 'sign',nargout=4)
+            w, a, shat, numit = eng.ogive_s(
+                X_matlab, step_size, aini, n_iter, "sign", nargout=4
+            )
         elif update == "mix":
             # Run the MATLAB versio no OGIVE a written by Zbynek
-            w, a, shat, numit = eng.ogive_a(X_matlab, step_size, aini, n_iter, 'sign', nargout=4)
+            w, a, shat, numit = eng.ogive_a(
+                X_matlab, step_size, aini, n_iter, "sign", nargout=4
+            )
         elif update == "demix":
             # Run the MATLAB versio no OGIVE w written by Zbynek
-            w, a, shat, numit = eng.ogive_w(X_matlab, step_size, aini, n_iter, 'sign', nargout=4)
+            w, a, shat, numit = eng.ogive_w(
+                X_matlab, step_size, aini, n_iter, "sign", nargout=4
+            )
         else:
             raise ValueError(f"Unknown update type {update}")
 

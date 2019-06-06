@@ -33,7 +33,6 @@ from scipy.io import wavfile
 
 from mir_eval.separation import bss_eval_sources
 
-import matwrap
 from routines import (
     PlaySoundGUI,
     grid_layout,
@@ -165,7 +164,7 @@ if __name__ == "__main__":
     # param ogive
     ogive_mu = 0.1
     ogive_update = "switching"
-    ogive_iter = 4000
+    ogive_iter = 1000
 
     # pre-emphasis of blinky signals
     pre_emphasis = False
