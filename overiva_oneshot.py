@@ -134,6 +134,7 @@ if __name__ == "__main__":
     n_mics = args.mics
     n_sources_target = args.srcs  # the determined case
     if args.algo.startswith("ogive"):
+        print("OGIVE only works with a single source. Using only one source.")
         n_sources_target = 1
 
     use_fake_blinky = False
@@ -158,16 +159,11 @@ if __name__ == "__main__":
 
     # algorithm parameters
     n_iter = args.n_iter
-    n_nmf_sub_iter = 100
-    sparse_reg = 0.0
 
     # param ogive
     ogive_mu = 0.1
     ogive_update = "switching"
     ogive_iter = 2000
-
-    # pre-emphasis of blinky signals
-    pre_emphasis = False
 
     # Geometry of the room and location of sources and microphones
     room_dim = np.array([10, 7.5, 3])
@@ -292,11 +288,6 @@ if __name__ == "__main__":
 
     # START BSS
     ###########
-
-    # pre-emphasis on blinky signals
-    if pre_emphasis:
-        mics_signals[n_mics:, :-1] = np.diff(mics_signals[n_mics:, :], axis=1)
-        mics_signals[n_mics:, -1] = 0.0
 
     # shape: (n_frames, n_freq, n_mics)
     X_all = pra.transform.analysis(
