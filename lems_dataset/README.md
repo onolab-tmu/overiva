@@ -38,12 +38,13 @@ Talker 	Measured 3D-location (meters)
 
 * Hand-labeled data showing which talkers are active in each frame for the first 200 frames (Matlab MAT file): [dataset1/GS5tks.mat](dataset1/GS5tks.mat)
 
-* An [AVI movie](dataset1/srpmov1fps_realtalkers.avi) (1 frame per second) created from Matlab showing a slice of the
+* An AVI movie (1 frame per second) created from Matlab showing a slice of the
   3-D SRP-PHAT surface through approximately the average talkers' height over
   400 frames (Please right click to save the file to your computer before
   playing it. If it still does not play, probably an Intel's IV50 codec is
-  needed, which can be downloaded here ): Movie of 5 real talkers' SRP-PHAT
-  surface
+  needed, which can be downloaded
+  [here](https://web.archive.org/web/20100803034556/http://downloadcenter.intel.com/download.aspx?url=/2846/eng/codinstl.exe&agr=N&ProductID=355&DwnldId=2846&strOSs=All&OSFullName=All+Operating+Systems&lang=eng).
+  [Movie of 5 real talkers' SRP-PHAT surface](dataset1/srpmov1fps_realtalkers.avi)
 
 Dataset2
 --------
