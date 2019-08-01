@@ -1,0 +1,38 @@
+{
+  "url": "https://web.archive.org/web/20100803034556/http://www.lems.brown.edu/array/data.html",
+  "files_base_url": "https://web.archive.org/web/20100803034556if_/http://www.lems.brown.edu/array/tools",
+  "dataset1": {
+    "files": {
+      "audio": "5talkers_fs20KHz_24mics.wav",
+      "mic_locs": "mic_loc.mat"
+    },
+    "talker_locations": [
+      [0.7296, -0.48, 2.5052],
+      [-0.7944, -0.29, 4.0292],
+      [-0.2048, -0.40, 2.5052],
+      [-0.7944, -0.44, 3.1148],
+      [1.0344, -0.55, 3.7244]
+    ]
+  },
+  "dataset2": {
+    "files": {
+      "audio": "191mikes_10tks.wav",
+      "mic_locs": "micloc181.txt",
+      "talker_activities": "GS5tks.mat",
+      "video": "srpmov1fps_realtalkers.avi"
+    },
+    "close_talking_channel_index": [ 184, 190, 183, 185, 182, 188, 186, 189, 191, 187 ],
+    "talker_locations": [
+      [ -0.7843, -0.5901, 4.6893 ],
+      [ -1.2831, -0.2969, 4.6324 ],
+      [ -0.7962, -0.3769, 2.7400 ],
+      [  0.2373, -0.2864, 2.7788 ],
+      [ -0.2137, -0.4063, 1.8620 ],
+      [ -1.0563, -0.3236, 1.9392 ],
+      [  0.7802, -0.7991, 3.4060 ],
+      [  0.1224, -0.8853, 4.0565 ],
+      [  0.6633, -0.7581, 4.3765 ],
+      [  0.6914, -0.5672, 1.9318 ]
+    ]
+  }
+}
