@@ -10,14 +10,13 @@ from .get import package_path, info_file_path, download_dataset
 
 
 def read_wav(fn):
-    """ Read a wav file possibly truncated """
+    """ Read a wav file, even if truncated """
     wf = wave.open(fn, "r")
 
     length = wf.getnframes()
     data = np.frombuffer(wf.readframes(length), dtype=np.int16)
     nchannels = wf.getnchannels()
 
-    
     size_mismatch = data.shape[0] % nchannels
     if size_mismatch != 0:
         data = data[:-size_mismatch]
@@ -31,6 +30,15 @@ class LEMSDataset(object):
     """
     A wrapper around the LEMS dataset introduced in [1]_ [2]_.
 
+    Parameters
+    ----------
+    data_dir: str
+        An optional location where the dataset should reside
+    dataset_number: int
+        Chooses between dataset1 (24 channels, 5 talkers) and dataset2 (181 channels, 10 talkers)
+    force_download: bool
+        If set to True, the dataset files will be downloaded even if they already exist
+
     References
     ----------
 
@@ -43,12 +51,19 @@ class LEMSDataset(object):
         Kyoto, Japan, Mar. 2012.
     """
 
-    def __init__(self, data_dir=None, dataset_number=2, force_download=True):
+    def __init__(
+        self,
+        data_dir: str = None,
+        dataset_number: int = 2,
+        force_download: bool = False,
+    ):
 
         if dataset_number not in [1, 2]:
             raise ValueError("Valid datasets are dataset1 and dataset2")
 
-        self.data_dir = download_dataset(dest_folder=data_dir, force_download=False)
+        self.data_dir = download_dataset(
+            dest_folder=data_dir, force_download=force_download
+        )
 
         with open(info_file_path(), "r") as f:
             info = json.load(f)
@@ -75,24 +90,31 @@ class LEMSDataset(object):
         # Mapping of speaker to channel
         if self.dataset_number == 2:
             self.close_talker_mapping = (
-                np.array(info[ds_name]["close_talking_channel_index"], dtype=np.int64) - 1
+                np.array(info[ds_name]["close_talking_channel_index"], dtype=np.int64)
+                - 1
             )
         else:
             self.close_talker_mapping = None
 
     def ntalkers(self):
+        """ Number of talkers """
         return self.talker_locs.shape[1]
 
     def nmics(self):
+        """ Number of microphones """
         return self.mic_locs.shape[1]
 
-    def play(self, channel):
+    def play(self, channel: int):
+        """ Plays one of the channels """
         sd.play(self.audio[:, channel], samplerate=self.fs)
 
-    def play_talker(self, talker_id):
+    def play_talker(self, talker_id: int):
+        """ Plays the close-talking signal from one of the talkers """
 
-        assert talker_id <= len(self.close_talker_mapping)
         assert self.dataset_number == 2, "Dataset1 has no close talking channels"
+        assert talker_id >= 0 and talker_id < len(
+            self.close_talker_mapping
+        ), "Talkers id are in 0-9"
 
         sd.play(self.audio[:, self.close_talker_mapping[talker_id]], samplerate=self.fs)
 
@@ -130,14 +152,3 @@ class LEMSDataset(object):
 
         ax = tpc.plot(color="b")
         mpc.plot(axes=ax, color="r")
-
-
-if __name__ == "__main__":
-
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Open the dataset")
-    parser.add_argument("folder", type=str, help="Folder of the dataset")
-    args = parser.parse_args()
-
-    dataset = Dataset(args.folder)

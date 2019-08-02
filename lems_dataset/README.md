@@ -12,7 +12,7 @@ This is the dataset used in the paper:
 
 > H. Do and H. F. Silverman, “SRP-PHAT methods of locating simultaneous multiple talkers using a frame of microphone array data,” Proc. ICASSP, pp. 125–128, Mar. 2010.
 
-![](icassp1.gif)
+![](img/icassp1.gif)
 
 Real data recorded from 5 simultaneously talking, human sources
 
@@ -85,4 +85,4 @@ This dataset is used in the paper:
 
 * The 191-channel recording (WAV file) can be found in [dataset2/191mikes_10tks.wav](dataset2/191mikes_10tks.wav).
 
-
+![](img/topview191mikes.gif)
