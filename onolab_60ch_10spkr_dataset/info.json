@@ -1,0 +1,71 @@
+{
+  "date": "2019-01-10",
+  "ntalkers": 10,
+  "location": "Tokyo Metropolitan University, Hino Campus, Room 2-806",
+  "segmentation": {
+    "labels": [
+      "silence_1",
+      "intro",
+      "silence_2",
+      "talker_1",
+      "silence_3",
+      "talker_2",
+      "silence_4",
+      "talker3",
+      "silence_5",
+      "talker_4",
+      "silence_6",
+      "talker_5",
+      "silence_7",
+      "talker_6",
+      "silence_8",
+      "click",
+      "silence_9",
+      "talker_7",
+      "silence_10",
+      "talker_8",
+      "silence_11",
+      "talker_9",
+      "silence_12",
+      "talker_10",
+      "silence_13",
+      "outro"
+    ],
+    "limits": [
+      0,
+      29602,
+      220326,
+      232622,
+      583689,
+      662735,
+      928482,
+      1008281,
+      1348055,
+      1413802,
+      1721205,
+      1786951,
+      2190213,
+      2234881,
+      3076788,
+      3090088,
+      3095107,
+      3148557,
+      3453701,
+      3553838,
+      3874279,
+      3947051,
+      4285571,
+      4318946,
+      4573400,
+      4609034,
+      4800000
+    ]
+  },
+  "url": "https://probably.github.com",
+  "files_base_url": "https://probably.zenodo.org",
+  "dataset": {
+    "files": {
+      "audio": "20190110_60ch_10spkr.wav"
+    }
+  }
+}
